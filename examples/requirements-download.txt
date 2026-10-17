@@ -1,0 +1,10 @@
+# Optional acquisition tools for examples/download_*.py; use a separate environment.
+# None of these is an xHW runtime dependency, and no test or tutorial imports them.
+h5netcdf[h5py]>=1.0
+icechunk>=1.0          # OISST: Source Cooperative Icechunk store
+zarr>=3                # OISST
+cdsapi>=0.7            # ERA5: Copernicus Climate Data Store; key in ~/.cdsapirc
+copernicusmarine>=2    # GLORYS: Copernicus Marine; `copernicusmarine login`
+fsspec>=2023.1         # ESA SST CCI: HTTP Range reads of CEDA files
+aiohttp>=3.8           # ESA SST CCI (fsspec HTTP backend)
+requests>=2.28         # ESA SST CCI: archive directory listings

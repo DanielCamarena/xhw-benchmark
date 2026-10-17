@@ -1,0 +1,30 @@
+{
+  "dataset_id": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk#daily",
+  "product": "NOAA OISST v2.1 AVHRR-only daily, final (doi:10.1175/JCLI-D-20-0166.1); originals s3://noaa-cdr-sea-surface-temp-optimum-interpolation-pds",
+  "version": "icechunk snapshot 1H5D09GQTBHSNHGT67TG",
+  "variable": "sst",
+  "query": {
+    "lat": [
+      -5.0,
+      5.0
+    ],
+    "lon_0_360": [
+      190.0,
+      240.0
+    ],
+    "lon_shift_applied": -360.0,
+    "time": [
+      "1991-01-01",
+      "2025-12-31"
+    ]
+  },
+  "accessed": "2026-10-12T06:12:19.385296+00:00",
+  "file": "oisst_v21_equatorial_1991_2025.nc",
+  "sha256": "a061ff363081818ed36debd7d460899854d7340cdf9fdb2ae80a79112a9ab0fe",
+  "content_sha256": "f7b6f66166876ae70f5a11629200b26131f46ee1ecfa6afb90ee0effd20492e7",
+  "sizes": {
+    "time": 12784,
+    "lat": 40,
+    "lon": 200
+  }
+}

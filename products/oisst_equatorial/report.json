@@ -1,0 +1,320 @@
+{
+  "case": "oisst_equatorial",
+  "executed_utc": "2026-10-17T08:36:32.127767+00:00",
+  "review_status": "executed; summaries pending scientific review",
+  "platform": "Windows",
+  "python": "3.12.10",
+  "versions": {
+    "xhw": "0.0.1",
+    "numpy": "2.5.4",
+    "xarray": "2026.7.0",
+    "scipy": "1.16.3",
+    "matplotlib": "3.11.2",
+    "h5netcdf": "1.8.1",
+    "nbformat": "5.11.1",
+    "nbclient": "0.11.0"
+  },
+  "code": {
+    "package_modules_sha256": {
+      "__init__.py": "09401bf57056e700fcf8ed555e242e8157368a0842e6352467f053be3b3c3a81",
+      "_aggregate.py": "23690b0335e0c7aef7b8334680c286031d1d67686dbd9d378401fc95151e955d",
+      "_baseline.py": "23f0d4dfc0b2092b8549a4e55a38a9532c00e2497d34b9dad009024c11814cd8",
+      "_catalog.py": "58950d192c666e3dd7187de236b12d35483cf4107d83f3f7a2d80ad0231b38ba",
+      "_detect.py": "b73ce1551d5d03f2d0e355b49108380b3064c26c534ed70c419c78ff1b8b8ea7",
+      "_dynamic.py": "be3d6eb5297ca81cd1b2c4d743b6b630fdd79b4187e3e8bfddb81eaece285648",
+      "_errors.py": "7ea146c05b5d6c029aa451c8ce967b7fe167bbbf7f6382257a5d5c0d25d82326",
+      "_events.py": "e3ae8671b2daa8318619f5e5f8881ab1d7c50985e68cd0344607611d3dcd0dd9",
+      "_gam.py": "83ba55e53ed77272730e4706330149f6188d343e5b26a970d4f1e6667e551575",
+      "_ingest.py": "82f083c996d535d2f63a29b1029b33429f9bcb5b8f1ffb606a4023bf7dea14e8",
+      "_lineage.py": "c3f5db9b55e3a0a8fcb8f32105f9e733ec4984f5bf4b55e82eb9e6ae85a267ad",
+      "_lineage_metrics.py": "82a39539f27f10ac0b176d643387fe333b86777aaed4913e4b3980d020bc704b",
+      "_mask.py": "3e9d75607537cbf489a58a6afbc1678adf5d6be2cddf97e937d02b2393294bcf",
+      "_morph.py": "4d7e2734ae3f45f4bc075fd67b59f5447d3e49c2c9ca1dddbb090d3f360597ff",
+      "_objects.py": "f81a9ef7703d58d756d86e2e95cec5cfdc15b46611be32867581b9cdee558771",
+      "_partition.py": "813e16ae7beecb7dd78af11db1a1be445891d370b793edb4f4db0ba79799618b",
+      "_rates.py": "5c6928d2fa6dfa785c95ea8501fccb5d580696fc0de9f847b33ae91b537995ca",
+      "_recipe.py": "2665de9a89f5568de2993431194be14e46cd77a0ef12e7b5b2c7cfa933f95b62",
+      "_schema.py": "6e4c4702c24e239132e070fe95064c1bf170865a60423b8d5e49346ebbdce665",
+      "_specs.py": "2f183cb207084e7065b6493537c8900e98004105924b4b9ec78935b416418992",
+      "_ssa.py": "d9ce7a4e1aedb5ed8fd40bba50a8201383d13b0156d7d8654f395aa99b0e9f04",
+      "_stl.py": "35ddb4a1c6ae700e6b949e472f862742a4ad2de3ea7fea36535833bb14027fe1",
+      "_track.py": "ba399c76559ae977db43db906d573e0fe4e9e4971e2178ab07ee6bdba88b56d7"
+    },
+    "example_sources_sha256": {
+      "_data.py": "b428b8549fa84132ec139b95823950bbd78092fabb5efe03b012219cd832c3dc",
+      "_report.py": "a35396af3e6359b02b7d744180b3173807d93af235dae1f2286c8e092a65d42c",
+      "array_storage.py": "46f198dcd6e7d42246cd4043194b7ec859a9a49223e63dc6b3107ab18939dc12",
+      "content_hash.py": "af3db4fb50cd5b992f461729730c514d3d12be0397c5b732edf97cbfac0c44cf",
+      "download_era5.py": "40cf574181680d36b6228e01d102ab5ad1cd95a51353668a06d51db724da8a7c",
+      "download_glorys.py": "dd7611aef6d65e22a5b7902fcc058dfa76895b64edcdca0eeb218f4cf72c4e74",
+      "download_oisst.py": "b4049f0228754d3808d3b73ce7b0b2cf1e24146e322b656fa8b7f4d79fca32b9",
+      "download_ostia.py": "2174b8064f3c4b908c02f5c499abd3a73c0e5f6d6fe6e8aca8f19b3a42421e33",
+      "download_sst_cci.py": "256a7608553395331e1477bfb4a7b6cfda8dad92fe340e967a0e11fac4353688",
+      "era5_peru.py": "33903208322a83ca0161f3f3c2582f8a6d4c741d86711bd8c120b7a453c4bde9",
+      "execute_notebooks.py": "c84e45291239f21123319950b57619ab2a0d1f2e80508c58cd34de0662424d78",
+      "exploration.py": "4e9aec8606b6ca5fbffac401830a802e86c3f314a963afea01c07bd792a808b6",
+      "fetch_data.py": "71b6258212436c486766b4fb5ba44be0c8718b667a8d401393c29fde0a0ff910",
+      "glorys_volume.py": "8aaa1fdb6a8241c498eaf2dbe81f62193bcd313af0ef486f56d812b2cd87e2cb",
+      "make_test_datasets.py": "7a42ba0d4c729d1c1d4f200cbe766716592b517837ce4e6fe93572e9549f9077",
+      "npacific_blocks.py": "1136b6ba635fc93a21416b1968e83c7f693fe366e394ed931ca82c3991f95a5a",
+      "oisst_equatorial.py": "bb639ef3ecb213f9fce4e2b5720e41d53d860fc1dc937e15add9a9dcfb7e44eb",
+      "oisst_npacific.py": "ac13de54cac0a70ebe35cec2428b7c06416305125ae83a966a6974066fcb8880",
+      "oisst_peru.py": "696235745fc0cad384a4a9e33fa3c2974c11a2acde8e5e8790c8c2004a79cd46",
+      "ostia_peru.py": "56a73484f0984c6d9c77873c2d7afd6f31ca7fcd22e1a041b03d22d22f29e8da",
+      "plotting.py": "1f9cad4157d42ee3ba9efaeb631591260f0d489dd9358bf85d1de9a9c37c6e0b",
+      "profiles.py": "59ace84327d384d63c717314f1d765c39cd52252e38cff4b5255ad27fc80aaa4",
+      "provenance.py": "66ee55253a87357f09dba7126d86b0d84a683cf64d91348230b6a8a050b80740",
+      "verify_data.py": "10309b3630397af42e3b3e5b893b7b69cdec259706d2d9af4cc8ca346187b3a9"
+    },
+    "example_base_revision": null,
+    "example_worktree_dirty": null
+  },
+  "execution_options": {
+    "requested_memory_mapping": true
+  },
+  "source": {
+    "type": "SourceRef",
+    "schema_version": "0.1",
+    "fields": {
+      "dataset_id": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk#daily",
+      "variable": "sst",
+      "accessed": "2026-10-12T06:12:19.385296+00:00",
+      "product_status": "final",
+      "version": "icechunk snapshot 1H5D09GQTBHSNHGT67TG",
+      "query": null,
+      "checksum": "sha256:a061ff363081818ed36debd7d460899854d7340cdf9fdb2ae80a79112a9ab0fe"
+    }
+  },
+  "grid": {
+    "type": "GridSpec",
+    "schema_version": "0.1",
+    "fields": {
+      "support": "surface",
+      "topology": "structured",
+      "time_dim": "time",
+      "spatial_dims": [
+        "lat",
+        "lon"
+      ],
+      "coords": {
+        "lat": "lat",
+        "lon": "lon",
+        "depth": null,
+        "along": null
+      },
+      "calendar": "standard",
+      "frequency": "1D",
+      "time_axes": "single",
+      "periodic_x": false,
+      "cell_measure": {
+        "kind": "area",
+        "var": "cell_area",
+        "units": "m2"
+      },
+      "vertical": null,
+      "domain": "ocean",
+      "domain_mask": "domain_mask",
+      "domain_fraction": null,
+      "native": {
+        "product": "NOAA OISST v2.1 AVHRR-only",
+        "resolution": "0.25 degree",
+        "is_native": true,
+        "regridded_from": null
+      }
+    }
+  },
+  "baseline": {
+    "type": "BaselineSpec",
+    "schema_version": "0.1",
+    "fields": {
+      "method": "fixed_climatology",
+      "computed_on": "temperature",
+      "reference_period": [
+        "1991-01-01",
+        "2020-12-31"
+      ],
+      "source": {
+        "dataset_id": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk#daily",
+        "variable": "sst",
+        "accessed": "2026-10-12T06:12:19.385296+00:00",
+        "product_status": "final",
+        "version": "icechunk snapshot 1H5D09GQTBHSNHGT67TG",
+        "query": null,
+        "checksum": "sha256:a061ff363081818ed36debd7d460899854d7340cdf9fdb2ae80a79112a9ab0fe"
+      },
+      "doy_window_days": 11,
+      "smoothing_window_days": 31,
+      "percentile_estimator": "hyndman_fan_7",
+      "leap_day_policy": "hobday_366_interp",
+      "min_samples": 264,
+      "fit_mode": "retrospective",
+      "available_until": null,
+      "params": [],
+      "in_base_correction": "none"
+    }
+  },
+  "definition": {
+    "type": "DefinitionSpec",
+    "schema_version": "0.1",
+    "fields": {
+      "profile": "hobday2016",
+      "phenomenon": "mhw",
+      "variable": "sea_surface_temperature",
+      "combination": "single",
+      "daily_statistic": "native",
+      "day_definition": "native",
+      "tail": "upper",
+      "comparator": ">",
+      "threshold_kind": "percentile",
+      "percentile": 90.0,
+      "absolute_threshold": null,
+      "min_duration_days": 5,
+      "max_gap_days": 2,
+      "join_rule": "qualify_then_join",
+      "missing_policy": "as_non_exceedance",
+      "season_months": null,
+      "category_scheme": "hobday2018",
+      "components": null
+    }
+  },
+  "recipe": {
+    "type": "SpatialRecipe",
+    "schema_version": "0.1",
+    "fields": {
+      "input_layer": "event_membership",
+      "steps": [
+        {
+          "op": "segment",
+          "footprint": {
+            "kind": "connectivity",
+            "connectivity": 1,
+            "radius_km": null,
+            "offsets": null,
+            "vertical_gap_m": null
+          },
+          "min_area": {
+            "kind": "domain_fraction",
+            "value": 5.0,
+            "floor_km2": null
+          },
+          "min_duration_days": null,
+          "max_gap_days": null,
+          "join_rule": null,
+          "min_overlap": null,
+          "link_measure": null,
+          "dominance_measure": null,
+          "tie_rule": null,
+          "branch_rule": null
+        },
+        {
+          "op": "track",
+          "footprint": null,
+          "min_area": null,
+          "min_duration_days": 5,
+          "max_gap_days": 0,
+          "join_rule": null,
+          "min_overlap": 0.0,
+          "link_measure": null,
+          "dominance_measure": null,
+          "tie_rule": null,
+          "branch_rule": null
+        }
+      ]
+    }
+  },
+  "link_policy": {
+    "type": "LinkPolicy",
+    "schema_version": "0.1",
+    "fields": {
+      "measure": "overlap_smaller",
+      "threshold": 0.0,
+      "max_gap_days": 0,
+      "dominance_measure": "overlap_smaller",
+      "tie_rule": "lowest_id"
+    }
+  },
+  "extra": {
+    "selection": "Equatorial Pacific (Nino 3.4): latitude -5 to 5; longitude -170 to -120; 1991\u20132025",
+    "dynamic_baseline": {
+      "type": "BaselineSpec",
+      "schema_version": "0.1",
+      "fields": {
+        "method": "detrended",
+        "computed_on": "temperature",
+        "reference_period": [
+          "1991-01-01",
+          "2020-12-31"
+        ],
+        "source": {
+          "dataset_id": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk#daily",
+          "variable": "sst",
+          "accessed": "2026-10-12T06:12:19.385296+00:00",
+          "product_status": "final",
+          "version": "icechunk snapshot 1H5D09GQTBHSNHGT67TG",
+          "query": null,
+          "checksum": "sha256:a061ff363081818ed36debd7d460899854d7340cdf9fdb2ae80a79112a9ab0fe"
+        },
+        "doy_window_days": 11,
+        "smoothing_window_days": 31,
+        "percentile_estimator": "hyndman_fan_7",
+        "leap_day_policy": "hobday_366_interp",
+        "min_samples": 264,
+        "fit_mode": "retrospective",
+        "available_until": null,
+        "params": [],
+        "in_base_correction": "none"
+      }
+    },
+    "comparison_denominator": "union of membership on jointly valid cell-days",
+    "common_valid_cell_days": 102272000,
+    "source_resolution_degrees": 0.25
+  },
+  "metrics": {
+    "MHW": {
+      "events": 376186,
+      "exceedance_cell_days": 10882881,
+      "event_cell_days": 8688894,
+      "joined_cell_days": 135538,
+      "valid_cell_days": 102272000,
+      "filled_cell_days": 0,
+      "max_duration_days": 378
+    },
+    "MCS": {
+      "events": 579809,
+      "exceedance_cell_days": 10099450,
+      "event_cell_days": 7836939,
+      "joined_cell_days": 85936,
+      "valid_cell_days": 102272000,
+      "filled_cell_days": 0,
+      "max_duration_days": 291
+    },
+    "detrended": {
+      "events": 374470,
+      "exceedance_cell_days": 10870121,
+      "event_cell_days": 8682567,
+      "joined_cell_days": 134612,
+      "valid_cell_days": 102272000,
+      "filled_cell_days": 0,
+      "max_duration_days": 381
+    },
+    "fixed_detrended_jaccard": 0.9320851874471071,
+    "lineage_catalog_export": {
+      "status": "not exportable as qualified EventCatalog",
+      "short_components": 24,
+      "reason": "qualified events shorter than min_duration_days"
+    },
+    "spatial": {
+      "patches": 2380,
+      "tracks": 58,
+      "branches": 288,
+      "spacetime_events": 82,
+      "splits": 63,
+      "merges": 55,
+      "max_size": 6174312208213.023,
+      "size_units": "m2",
+      "max_size_time": 1938247698332981.8,
+      "max_duration_days": 418
+    },
+    "largest_size_time_event": 55
+  }
+}

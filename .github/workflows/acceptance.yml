@@ -1,0 +1,30 @@
+name: Offline example checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  examples:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      DASK_NUM_WORKERS: '2'
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@v4
+        with:
+          repository: DanielCamarena/xhw
+          path: .validation-core
+      - run: python -m pip install './.validation-core[dev]' -r examples/requirements-interactive.txt
+      - run: python -m pytest
+      - run: python -m ruff check examples tests tools
+      - run: python tools/validate_docs.py
+# Real-data notebooks run locally with registered assets; CI does not download them.

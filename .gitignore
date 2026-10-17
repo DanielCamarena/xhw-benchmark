@@ -1,0 +1,14 @@
+# Data and heavy products travel as release assets; their hashes live in examples/sources/.
+data/
+outputs/
+results/
+_arrays/
+products/**/*.nc
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.part
+.DS_Store

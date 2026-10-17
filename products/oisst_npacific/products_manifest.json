@@ -1,0 +1,1444 @@
+{
+  "case": "oisst_npacific",
+  "created": "2026-10-17T00:30:31+00:00",
+  "xhw_version": "0.1.0",
+  "distribution": "NetCDF files are release assets (ignored by git); this manifest is in git",
+  "mask_files": "boolean and flag layers only; temperature, reference and threshold omitted",
+  "files": {
+    "mhw_1991_2025_lat0000_0004_mask.nc": {
+      "bytes": 1030024,
+      "sha256": "942c63c936caed7188b6466dbccf5c9f4b9acd0ea794f27197f67ffb61ed551b",
+      "content_sha256": "8d4486e9a7c54b9669d6bff823994c387e763ea9bcc2243561a871094f93ba46",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0000_0004_mask.nc": {
+      "bytes": 965965,
+      "sha256": "eae64fcf877cadeba7192b0f8778a3b80f1cce236f2f66b8eba5b2a571d152bd",
+      "content_sha256": "1ad7f48dded888ec4d19a857ac8143b74ea209b2311cb0b2b3a32bafd86cbc48",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0004_0008_mask.nc": {
+      "bytes": 1043885,
+      "sha256": "551ef67223a9b34360e4f2b28c4920e36136befdc4128d5accd81867d8894809",
+      "content_sha256": "ac863e7c27491e827532b245995383f9a25755e8acdd2177621e8d90a5bfda37",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0004_0008_mask.nc": {
+      "bytes": 968189,
+      "sha256": "bd94dd870532d107e3d9d846e1938f59b2d3fbab4dd5a2b2db171c8d714b835c",
+      "content_sha256": "2683ff6cae488022b41e909d9476758cc75e0eb831446ff791114bc730ecf3b7",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0008_0012_mask.nc": {
+      "bytes": 1055276,
+      "sha256": "be6d8eb8c8237e43e07f28075444f9d86ec2f577a9dde578281270cf3db7f61d",
+      "content_sha256": "b5a1e97a4c32233172f26ea7b64c65fb4ddc370d09e075e09ca43f57b4c03efc",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0008_0012_mask.nc": {
+      "bytes": 978982,
+      "sha256": "91092125b77c5ce8693bd79032b787269bf625aeef7a7c5b789e354adf8c05cf",
+      "content_sha256": "6d299e4630fb6ba42361d8f063b45baa24b2b884cc1783cd5c899251ab64992e",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0012_0016_mask.nc": {
+      "bytes": 1078444,
+      "sha256": "b3822883c45cb0fc82f48246975f75a3e756c65fdc251c3ef5e21c937989dae3",
+      "content_sha256": "38e35c68e6c724b93edb4c26f9eaad25edc910e7596b6d6e4fe5f297528cf92b",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0012_0016_mask.nc": {
+      "bytes": 982243,
+      "sha256": "a202d6ed49098a37948094566a1c4adca13d27ca960dc4c42c4658577ae39e11",
+      "content_sha256": "cbe5c408240ab635a380e67f32a45aa754a249dbd30d7c7d3941d61e77d53c38",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0016_0020_mask.nc": {
+      "bytes": 1073779,
+      "sha256": "a5d482f68853960ab63894f35b8b6cb2b1e58d523b1f2c8a8c6a5eed6c20d18a",
+      "content_sha256": "7bede44c8d6757ba86f066b6d0003a3a6daba7683ab7cfe4a18265abb4581a0c",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0016_0020_mask.nc": {
+      "bytes": 970526,
+      "sha256": "4d2390ff5b7d5e24670c50a17629dece6b84d61b0f34b50c7e2fe3933bf389bf",
+      "content_sha256": "7df1a3155305aa5a54c5c96ec959d3bdf0272bcb393236c89ae36cb88ac9b03c",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0020_0024_mask.nc": {
+      "bytes": 1072888,
+      "sha256": "4fce9cbcad4b78d6f452119ea7729275d5ed07bd3951aebbaf167ba0b45c7430",
+      "content_sha256": "c02942eb3d244bcd20a12912f3bdbf3090c6382e0cdf88ad471c704c4ed422cd",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0020_0024_mask.nc": {
+      "bytes": 961981,
+      "sha256": "2c87a7178421006c839664ab5dc3f4e1ddb64fb0d270b2a76d170fd30e4cf63f",
+      "content_sha256": "a762073d0c7fb13f02310cdbe47dce0b45ab7d21eb6596f20193a6b3181d7988",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0024_0028_mask.nc": {
+      "bytes": 1062257,
+      "sha256": "f41521e1cd874cd389d45db671e1a06e934d61f1c7c182dc5e3cf345109a32d5",
+      "content_sha256": "d6df690fdfc4ebb1528837ee4c0b37394a646113cdb541041a166b62ccc95138",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0024_0028_mask.nc": {
+      "bytes": 961132,
+      "sha256": "4cec55eb19e99a338c035010ebd3d7bdbe431f97b1054b4995362e1e4f2fe456",
+      "content_sha256": "d1618105c037f9aed4684a978e1de5d7fc7b9c9ea8209024ba3443a1e181836f",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0028_0032_mask.nc": {
+      "bytes": 1059653,
+      "sha256": "8de132015a1b9bb847f0c6d2e6c073ab1398c2551bdfd45a39fd1a073a5ed19b",
+      "content_sha256": "8faedfd53656e15ab5fa09f6d1fda7523694ef344914c5f16420149493efd4d4",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0028_0032_mask.nc": {
+      "bytes": 968665,
+      "sha256": "c4cf9780707791a7299ed6af1f8c6dbc39fdaa98a3ae6c90829909dfeeaff5e7",
+      "content_sha256": "cb0f141b93aa0990286a4995d63c1b0c1b7bb2619aff827b385ac4eafb2e06c8",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0032_0036_mask.nc": {
+      "bytes": 1058687,
+      "sha256": "29d58f68336cde9617a6f6d99e468bca9bcf04fbc6acdaab059e160e62210ec8",
+      "content_sha256": "77aacf4b3ea1f3f728caeba4dac95af96d75958de04da515c4dad0f1853f0c98",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0032_0036_mask.nc": {
+      "bytes": 966349,
+      "sha256": "0cbbc583a84edd96ebc90aa8e7d94b0b304caa4f3380625d5089bb0263db3e27",
+      "content_sha256": "12a35ccd5c1440e3121517e584cac6643f590c42be5568fa52588db6caeb783f",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0036_0040_mask.nc": {
+      "bytes": 1062297,
+      "sha256": "c28460fc7ac4bf175e3ffb3eafa261e7e8a655589e14490fa2ad36681ae0d493",
+      "content_sha256": "148812a3c660ef2a98df7508500b630b048ede369638157306c1282c343cf3b4",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0036_0040_mask.nc": {
+      "bytes": 967518,
+      "sha256": "7d2e05c565f836edfea39e431e83367953a9e0054be5fb7c8669b5b5acaba853",
+      "content_sha256": "4351001fb3c2314ec3346551adbc3ae102eefc634377954c9f4b440ae660cccc",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0040_0044_mask.nc": {
+      "bytes": 1081157,
+      "sha256": "946f14a4b2c96370d1442eadac85dd373c5486b5c8995e1e729d73ad8936988d",
+      "content_sha256": "5afc6fec048964aa3477293b4091ebc1907d6c2d9afdbbaaf583fb2a94e649e1",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0040_0044_mask.nc": {
+      "bytes": 973943,
+      "sha256": "945d2b26091bbddfa5af83f92f4c4cefff568549bc547b7f61ab88d18453314e",
+      "content_sha256": "86811058af175cf4f6d8ba18c5eed5aeecfaaa7a9950c2011b2a35777a7010c9",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0044_0048_mask.nc": {
+      "bytes": 1096355,
+      "sha256": "cb30bbb6f7bbd479734937e8e201659cfa7928f0f303e627579ac99db5dd45f6",
+      "content_sha256": "5026f8fbe08e540f92db0738cf3b324e10d80bc225e2c8d0f838119e146b0673",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0044_0048_mask.nc": {
+      "bytes": 983923,
+      "sha256": "71171b4cba89366b01270947098521231ec39db755e2861cf30accf8e1215446",
+      "content_sha256": "2e0cfdb60c11d7a5d955df65440fa15c7e61a26d7fc47a7ad526bfaf8897970d",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0048_0052_mask.nc": {
+      "bytes": 1098359,
+      "sha256": "8d871eeae03192ffd70723935a427ff2dad8f268cac021c807733ba139ae411c",
+      "content_sha256": "4cae66226fb783737c5011feb1367ffc04c8cd3603524165af9a186c198432db",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0048_0052_mask.nc": {
+      "bytes": 972083,
+      "sha256": "1d3798324283b74dff245120f74aa437c6da90118c10848b2cd62941834de3fa",
+      "content_sha256": "415bf05a78a2e790327c5e431727ce6cb1f8322a5929e8469f2b77ed30466366",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0052_0056_mask.nc": {
+      "bytes": 1095008,
+      "sha256": "24ad166cbe0f8beccf31a23d35424aeea941484012d9a57261ee57f3a4b4c39f",
+      "content_sha256": "219ee6fe0d8ef993e6e149fbaa7dd0bef7c4fb344baa68a604eb2945a5e29122",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0052_0056_mask.nc": {
+      "bytes": 968510,
+      "sha256": "013c66494409506758b6b94d137f692ec5c8e3526f74843a6c8642ddadfad6ca",
+      "content_sha256": "95ac8c38b404f5df880bb572df7240e0b9899c6d9300ffc660ced59891dd8805",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0056_0060_mask.nc": {
+      "bytes": 1084456,
+      "sha256": "e09d825a5fd470a8e7cfaa898beca9e5a8bf243339de7ba4011098425a4ecb1c",
+      "content_sha256": "226759230e29cd818a994bbf130dc7d05713358978e261157868ce10d47c71c7",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0056_0060_mask.nc": {
+      "bytes": 961862,
+      "sha256": "4c5c7559976c6aa6e56926cff9c645747c5f7eeac138f7ec9076e1ade3161e16",
+      "content_sha256": "f60905d16ac157a425290b4ed02344d6d8a153fa558399c64ef4de7a457d23e2",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0060_0064_mask.nc": {
+      "bytes": 1073445,
+      "sha256": "fd56211a8d9f127d218e0794f6df73fdc3f032e19552f098188ddf02238599d4",
+      "content_sha256": "d6210bd45615edbbf6d2c22a411c39613a456b586344feeb84d5218ebd778e47",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0060_0064_mask.nc": {
+      "bytes": 957830,
+      "sha256": "fbba541e854a3adc89fba6fa9093c05c475120e0935dadd7773539725e8f85b8",
+      "content_sha256": "9ef971eb816cfff5d0f5d95aea0b46436cdaf24855af92f2a7aad62bad7abcec",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0064_0068_mask.nc": {
+      "bytes": 1056089,
+      "sha256": "7868177844723ddc4d55c633a83a693088a5b9ceec3653cccf00e6bdc1f5793d",
+      "content_sha256": "534e5b58552ea37d4554223611fda1dd211ffc4e69a6ef57b861d99cb1cecc75",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0064_0068_mask.nc": {
+      "bytes": 951296,
+      "sha256": "2405679b86f2a8ddc5f9b40d831c316b1413b129d3dfe3a89fee7792c8ee1204",
+      "content_sha256": "f91b2f64e9d8ca4b44a23b8f64a1fc06860d28a320197590aab2475291dec68b",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0068_0072_mask.nc": {
+      "bytes": 1041193,
+      "sha256": "85820c8f212daf6967ab73198727d0378bc1f3cdabf26e82fa6c1b836c145408",
+      "content_sha256": "22536ae02fc717036392d9e79d6890b34ee83e219d66b4ae9a111e5cf5c52520",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0068_0072_mask.nc": {
+      "bytes": 942706,
+      "sha256": "8a4724fef51038b2cb373e5fd3f4635f293b9b9b6d6cc179cc2efa755395e4ae",
+      "content_sha256": "4ead30cb5337d6523381ba05400ed4f7d5c3f3ac66e775e3e301fd0300572896",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0072_0076_mask.nc": {
+      "bytes": 1034391,
+      "sha256": "5538e71107383d20de034baa23e883e0c7b51d3527dde4aa3997ed010033f609",
+      "content_sha256": "ec7deab6e9bd1f298edc2630e004633cf15debe587ea64a6e84d94f2d0101057",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0072_0076_mask.nc": {
+      "bytes": 935833,
+      "sha256": "c7944dbd4e651fedfc3d2c33d987d84bf8aee199641e974b8dcef38d3e480dcc",
+      "content_sha256": "6f9c93fc82dc59e787310c70cdbf27971eac4062ecdcd3203ec646f942c0a27f",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0076_0080_mask.nc": {
+      "bytes": 1036235,
+      "sha256": "9c1efefc2dc91fd393f174c48e7ebfd43bb5f323142c994206c9b6b91d00c006",
+      "content_sha256": "3b1c18e8e1e35de027f5efaab16e565da8190d899113c0b57054ec29f873c61a",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0076_0080_mask.nc": {
+      "bytes": 941540,
+      "sha256": "795cfa0123e309a453450c6246af59950ec30607cdf3db087876e2f3e3120829",
+      "content_sha256": "07238891a20344dd9bb2d014af8dfa8067ae02a5fe03457706ec403e5d4abc94",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0080_0084_mask.nc": {
+      "bytes": 1030438,
+      "sha256": "89e69e0176250ad3eaf3683f808860bb0cba7f8dbdffc1c3e17befe304cb3edf",
+      "content_sha256": "90b46621a1f6247c4f89c70efefb8f260f273913276626af9f8a3ea161331f15",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0080_0084_mask.nc": {
+      "bytes": 937288,
+      "sha256": "254bd1f102f064cb2d6ba9ef7ba0e93d8e34e0bea3ee0b177532c4ba04d47c58",
+      "content_sha256": "0db014f33373f4f451c284c34166539e31f6a71623668d1846809a9d1d517029",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0084_0088_mask.nc": {
+      "bytes": 1010272,
+      "sha256": "c7142b25deeac7055c76a670a2fdb6cff7651f372403c5222bd65ec61f183e46",
+      "content_sha256": "2ef10b5256663b6ddb576ca20af45f890c9eaeac34b0357c9cbccd46a028ba98",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0084_0088_mask.nc": {
+      "bytes": 931450,
+      "sha256": "87513ec94b36164ed7c00247a62e65b3f0224c7d36150f974f0e38e24c4a5873",
+      "content_sha256": "7a0787301fe241ead62286cb3c6655fc04f92dbacd0316fd59b4cfbd892535fa",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0088_0092_mask.nc": {
+      "bytes": 980797,
+      "sha256": "34d7cfb45d07cd647dfbf8f9454da1d9229c312544ed6ac815a8cc85c2234eba",
+      "content_sha256": "0483109881424645508cd85938c23f325887810e04a2901df4a1f280546383ea",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0088_0092_mask.nc": {
+      "bytes": 930796,
+      "sha256": "eea21f6f0e1d77a55f8c989f093d0783aa262fd7584da7a2214f62128a7b900b",
+      "content_sha256": "e6fc7faca5de0403b15166238cc678a13968fe548612e59ca99337c8c871c1a0",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0092_0096_mask.nc": {
+      "bytes": 966836,
+      "sha256": "fcf0eeeee21e7f4a78f1f0e9218c4f2fc238641714e276257f7461e1648b1cbb",
+      "content_sha256": "948837c3c8cd652eadfee9c5e8b1c282ab96f239fc1303fcca3c0786773f655d",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0092_0096_mask.nc": {
+      "bytes": 924650,
+      "sha256": "c8482691f57f650ab8206e031e5dfaa3a7b99c724ff56dfef519835a9ef2eb2a",
+      "content_sha256": "eb6e2202a3b09c330630783cddf648ae5e3767913efeeb0d9230f5a5684a95a3",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0096_0100_mask.nc": {
+      "bytes": 961018,
+      "sha256": "c36711c281029d9fab373ce4577f0f52e57e59437435ae385309596904074278",
+      "content_sha256": "c1394f9b21f9c96ae9c5636d5b23884ca2eb0031410675c0449d711450fbc538",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0096_0100_mask.nc": {
+      "bytes": 909105,
+      "sha256": "6f1326a1afb3afee8d8f2290370c6de04a3a9c2c2a00721120ed4feb6f709099",
+      "content_sha256": "4ad40f81fb0f92ab4f78fc910446299add4ae1c938a91966b83bbb8fe0c3f325",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0100_0104_mask.nc": {
+      "bytes": 957466,
+      "sha256": "c02a2f7884e1d5af69a45c350fa5513bdf7f303959f91df254066e9d775033ed",
+      "content_sha256": "0463337986850a2ceb63467c1c56b2f66c0f725bfb1e13388e78128364463afa",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0100_0104_mask.nc": {
+      "bytes": 911626,
+      "sha256": "2e97acb2498ba3b932d23514cd43dfe238b17148b8f8225d680083bfb3189419",
+      "content_sha256": "4b706317c62d9054e6e066fd85cff70604fb975c6cf7767d5bc87d280864d051",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0104_0108_mask.nc": {
+      "bytes": 948701,
+      "sha256": "6dbde3385bc987302944496f1754afbfd1ec07839a93f382142f85757304f63a",
+      "content_sha256": "6f21627dfd0f86f6ff937cc6979769a7408dacb7302fa119f2ba705fb77760bc",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0104_0108_mask.nc": {
+      "bytes": 925916,
+      "sha256": "69454b00952b41d1e6e25c511abf62ce750254bd12a7070441c8e357b4b3ccdd",
+      "content_sha256": "c280f38f27f4f195bd979b4cc4dcc304083ef629853d5cacade631013d896ff8",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0108_0112_mask.nc": {
+      "bytes": 966570,
+      "sha256": "43c62dbdac0981a19356f384955053ed0e79b829d1633deb93e5d144370dffac",
+      "content_sha256": "097b5355dc6af384c46d98d9735f2cf198c2bc8a9230537860b58fafe43c0a53",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0108_0112_mask.nc": {
+      "bytes": 943544,
+      "sha256": "73c12508b4bc7d8a0d3cfaf76116a2aeb74e057d65cd2b32067611122e4a8282",
+      "content_sha256": "2c8b060748f313bb4d0e406bdeab62b7c57d3acc8f3ae41888bed04ee4e80e95",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0112_0116_mask.nc": {
+      "bytes": 980495,
+      "sha256": "e95ecbdf0a6a57318a93922aeec82935d432fc604317ce33b20e0c6e0463cd4e",
+      "content_sha256": "10f9a0c11f92ef5fd5d00ca07d4f770ee4e9ea29a3dfd6a108cfeb314969c39f",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0112_0116_mask.nc": {
+      "bytes": 961117,
+      "sha256": "933ccf3a2303a3f323d800e54c1b67e8a70530d3209e1320442b20950dcd9f67",
+      "content_sha256": "7635024ea3ec429368d71acd58ef8c8bf8662ae5d4756a227bfaff7d0e4bb7cb",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_lat0116_0120_mask.nc": {
+      "bytes": 982906,
+      "sha256": "8ac907925e21a98130b9566d800b9c51e01a0028e268947141b8dc4ede8b8a44",
+      "content_sha256": "bccdc9189ee235cc89ab9369bbc49bc36d87731bb101dc1a98b697b2ad0057f6",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mcs_1991_2025_lat0116_0120_mask.nc": {
+      "bytes": 960420,
+      "sha256": "93964a29df676a892a03fa136c72e4fde66a299bb6e8fdd55a3eb0e1795876e4",
+      "content_sha256": "c90c6fba67fb65759d85b9fc9508675834d7a2b37fb0d7bba72af61d5d567403",
+      "dims": {
+        "time": 12784,
+        "lat": 4,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "mhw_1991_2025_baseline.nc": {
+      "bytes": 148810420,
+      "sha256": "b64bf61249095663bffca9045c9af2fcaaeb259a28a251ac286826dcd7c864ff",
+      "content_sha256": "8c35dc38cce2abd5cc593e13a61ea2d18fadb378f115c5e1d675b964c5776be5",
+      "dims": {
+        "dayofyear": 366,
+        "lat": 120,
+        "lon": 280
+      },
+      "variables": [
+        "threshold",
+        "reference",
+        "sample_count",
+        "invalid_reason",
+        "domain_mask"
+      ]
+    },
+    "mcs_1991_2025_baseline.nc": {
+      "bytes": 149030664,
+      "sha256": "ba8e7e366b40e9365bdbe3496c4d230d8dc6c4b482dd1c70849cbfeefd4147ca",
+      "content_sha256": "7f93f48c25ad4359624ae24c5546988df5f36cfb9bbcc35b071bead4721a6f77",
+      "dims": {
+        "dayofyear": 366,
+        "lat": 120,
+        "lon": 280
+      },
+      "variables": [
+        "threshold",
+        "reference",
+        "sample_count",
+        "invalid_reason",
+        "domain_mask"
+      ]
+    },
+    "blob_2012_2018_mask.nc": {
+      "bytes": 5873755,
+      "sha256": "76d07652b42864da41b6c3ad7f4ee0cc752dce8ad30f90ea9c6e88f7a65238b0",
+      "content_sha256": "6b6a13b5576f7e30a1380fe9c62cffab3ff7ec3c0174b84e204cb4a5ffa0e19a",
+      "dims": {
+        "time": 2557,
+        "lat": 120,
+        "lon": 280
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "filled",
+        "domain_mask",
+        "cell_area"
+      ]
+    },
+    "blob_2012_2018_catalog.nc": {
+      "bytes": 47889163,
+      "sha256": "03658e61782ddde8a909f6347c8e237c6b81406f305c3c43f46a3cb38adb62a2",
+      "content_sha256": "11a4f34f3e81f8a8c6c521eff4d2181efa0de4125f99107a1e578d91bcfd5389",
+      "dims": {
+        "event": 590598
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_lat",
+        "index_lon",
+        "n_filled_days",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline",
+        "category_max",
+        "days_category_1",
+        "days_category_2",
+        "days_category_3",
+        "days_category_4"
+      ]
+    },
+    "blob_2012_2018_objects.nc": {
+      "bytes": 9411075,
+      "sha256": "6da3db07526a7bc7503e66ca9aedf6d5f923b69440ba547a3dd8b012322d695e",
+      "content_sha256": "d26f67262f1717ebd1d699adb6b58bfa470aa179ba6ff5c68698628c1a9fa3a2",
+      "dims": {
+        "time": 2557,
+        "lat": 120,
+        "lon": 280,
+        "object": 39388,
+        "track": 1514
+      },
+      "variables": [
+        "valid",
+        "domain_mask",
+        "cell_area",
+        "track_id",
+        "label",
+        "object_time",
+        "object_label",
+        "object_track",
+        "object_area",
+        "object_cells",
+        "object_lat",
+        "object_lon",
+        "track_number",
+        "track_start",
+        "track_end",
+        "track_duration_days",
+        "track_active_days",
+        "track_bridged_days",
+        "track_area_max",
+        "track_area_mean",
+        "track_area_days",
+        "track_n_multi_overlap_days",
+        "track_left_censored",
+        "track_right_censored",
+        "track_qualified",
+        "track_parent",
+        "track_merged_into",
+        "processed_mask",
+        "added",
+        "removed"
+      ]
+    },
+    "blob_2012_2018_lineage.nc": {
+      "bytes": 4063627,
+      "sha256": "63f0a9cd4e26e9b8505f9ceb869055b7f6006e50823ad01014e6c65439ec9791",
+      "content_sha256": "476c8e556b54b700d8b21d02881317149e355cabf00156436425a6c43948541e",
+      "dims": {
+        "transition": 38211,
+        "object": 39388,
+        "branch": 8548,
+        "spacetime_event": 1822,
+        "branch_link": 7371
+      },
+      "variables": [
+        "source_object",
+        "target_object",
+        "source_time",
+        "target_time",
+        "gap_days",
+        "shared",
+        "overlap_smaller",
+        "iou",
+        "source_fraction",
+        "target_fraction",
+        "linked",
+        "is_dominant_for_source",
+        "is_dominant_for_target",
+        "dominant_tied",
+        "object_time",
+        "object_label",
+        "in_degree",
+        "out_degree",
+        "node_type",
+        "is_split",
+        "is_merge",
+        "object_branch",
+        "object_spacetime_event",
+        "provisional",
+        "backend_id",
+        "object_area",
+        "object_cells",
+        "object_lat",
+        "object_lon",
+        "object_intensity_valid_cells",
+        "object_intensity_valid_measure",
+        "object_intensity_max",
+        "object_intensity_mean",
+        "object_intensity_cumulative",
+        "branch_number",
+        "branch_start",
+        "branch_end",
+        "branch_duration_days",
+        "branch_active_days",
+        "branch_bridged_days",
+        "branch_left_censored",
+        "branch_right_censored",
+        "branch_area_max",
+        "branch_peak_area_day",
+        "branch_area_days",
+        "branch_footprint",
+        "branch_net_displacement",
+        "branch_path_length",
+        "branch_provisional",
+        "branch_intensity_max",
+        "branch_intensity_mean",
+        "branch_intensity_cumulative",
+        "branch_peak_intensity_day",
+        "event_number",
+        "event_start",
+        "event_end",
+        "event_duration_days",
+        "event_active_days",
+        "event_bridged_days",
+        "event_n_objects",
+        "event_n_splits",
+        "event_n_merges",
+        "event_left_censored",
+        "event_right_censored",
+        "event_area_max",
+        "event_peak_area_day",
+        "event_area_days",
+        "event_footprint",
+        "event_net_displacement",
+        "event_path_length",
+        "event_provisional",
+        "event_intensity_max",
+        "event_intensity_mean",
+        "event_intensity_cumulative",
+        "event_peak_intensity_day",
+        "branch_spacetime_event",
+        "branch_link_parent",
+        "branch_link_child",
+        "event_n_branches",
+        "event_merged_into"
+      ]
+    }
+  },
+  "total_bytes": 424775069
+}

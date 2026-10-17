@@ -1,0 +1,36 @@
+{
+  "dataset_id": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk#daily",
+  "product": "NOAA OISST v2.1 AVHRR-only daily, final (doi:10.1175/JCLI-D-20-0166.1); originals s3://noaa-cdr-sea-surface-temp-optimum-interpolation-pds",
+  "version": "icechunk snapshot 1H5D09GQTBHSNHGT67TG",
+  "variable": "sst",
+  "query": {
+    "lat": [
+      25.0,
+      55.0
+    ],
+    "lon_0_360": [
+      160.0,
+      230.0
+    ],
+    "lon_shift_applied": 0.0,
+    "time": [
+      "1991-01-01",
+      "2025-12-31"
+    ]
+  },
+  "accessed": "2026-10-05T17:48:57+00:00",
+  "file": "oisst_v21_npacific_1991_2025.nc",
+  "sha256": "e89d0a120dc156b70844e5118e2c2df435b3b0641ef806d69e0cf15d79ed0546",
+  "content_sha256": "005228f232686b49b29ab5a841ca7b23f4754bfef34b248d55d4c57567e8bbff",
+  "sizes": {
+    "time": 12784,
+    "lat": 120,
+    "lon": 280
+  },
+  "compressed": {
+    "file": "oisst_npacific_1991_2025.nc",
+    "sha256": "d17c961d07af437fae25df3325d99ff410105ddeba2c975adb923c37275e3b8b",
+    "content_sha256": "005228f232686b49b29ab5a841ca7b23f4754bfef34b248d55d4c57567e8bbff",
+    "bytes": 445349285
+  }
+}

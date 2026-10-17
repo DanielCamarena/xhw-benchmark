@@ -1,0 +1,149 @@
+{
+  "dataset_id": "cmems_mod_glo_phy_my_0.083deg_P1D-m",
+  "product": "GLOBAL_MULTIYEAR_PHY_001_030",
+  "variable": "thetao",
+  "accessed": "2026-10-06",
+  "decimation": {
+    "stride": 8,
+    "levels": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22
+    ]
+  },
+  "files": {
+    "thetao_1993.nc": {
+      "bytes": 133928712,
+      "sha256": "0226e42fe0f3be428147319b364f09821629ac77acd41b1cac16e246b18c94f9"
+    },
+    "thetao_1994.nc": {
+      "bytes": 133928712,
+      "sha256": "1a206058834870f3bb928f1f93a39253949c264eee2810177590cceb041ad8b5"
+    },
+    "thetao_1995.nc": {
+      "bytes": 133928712,
+      "sha256": "c3f8c82b3d46024bdaf5c1b3f6ec1ae1fe2670a47026bbb55ec5dbab32b937f4"
+    },
+    "thetao_1996.nc": {
+      "bytes": 134295566,
+      "sha256": "82ac865f6e3df0ec1dc47af302cfd9357736c3409d30ebdb5e749f999b7dee9d"
+    },
+    "thetao_1997.nc": {
+      "bytes": 133928712,
+      "sha256": "982a02901f5c3466229006c15b587f8bc434a2801561fee3ef92f801d1a5d2c1"
+    },
+    "thetao_1998.nc": {
+      "bytes": 133928712,
+      "sha256": "736014ba6be6a2c0648d49150c8e1de9747ee429c62e167c3b4fad5531685507"
+    },
+    "thetao_1999.nc": {
+      "bytes": 133928712,
+      "sha256": "9479cecb3c5ecd10c4ebe01ec3fb10940fc10b84c5a656595e4047e0ee458bf0"
+    },
+    "thetao_2000.nc": {
+      "bytes": 134295566,
+      "sha256": "2a6f810ebb1c22253858806410659f52ac523d625dd91c7fbaed8accc6dd2552"
+    },
+    "thetao_2001.nc": {
+      "bytes": 133928712,
+      "sha256": "1f71334fffa5dcedce6659e45d55d2573b410fa4de1d12c7c2ad8cd2d7caca5b"
+    },
+    "thetao_2002.nc": {
+      "bytes": 133928712,
+      "sha256": "9de8867d37f6db6c7e725249101e542b9f821dbbc6c45f776e07c71f19fe792c"
+    },
+    "thetao_2003.nc": {
+      "bytes": 133928712,
+      "sha256": "e11822651f9c9e2244a1f9981ce302f254858f7dae0c42816eb5f0508a34b911"
+    },
+    "thetao_2004.nc": {
+      "bytes": 134295566,
+      "sha256": "53c7f7468c597693e519696a2f13b9acf38dbecddcda53d73047ced0b110c211"
+    },
+    "thetao_2005.nc": {
+      "bytes": 133928712,
+      "sha256": "ced97282e4ecd6bc22fd4d375f29006876176ad34e97a4f5972a8076e0d09600"
+    },
+    "thetao_2006.nc": {
+      "bytes": 133928712,
+      "sha256": "f434353b1e68c8ba921c1dddf683ea6de227cdd06c1f425237421b39633df387"
+    },
+    "thetao_2007.nc": {
+      "bytes": 133928712,
+      "sha256": "90ec70a7a4f073f27444be5e5ccb5d2c3528dae88337abc49cc7ebd0faa4d0bc"
+    },
+    "thetao_2008.nc": {
+      "bytes": 134295566,
+      "sha256": "479743b576d30fb28463fc2a69e150ff37a0f977c59e7f0c8ea68b2cf5d61ee4"
+    },
+    "thetao_2009.nc": {
+      "bytes": 133928712,
+      "sha256": "8d86951465ddc410596f8557a72147c5ac8441fbe757bb15a8112045a2554cfd"
+    },
+    "thetao_2010.nc": {
+      "bytes": 133928712,
+      "sha256": "12f492f11a3a95e46220adb4b8de61c419b3db19b5377c18c862afef95434ce3"
+    },
+    "thetao_2011.nc": {
+      "bytes": 133928712,
+      "sha256": "d19fdbd0de78f69c284ef3134cce8c3ddd5b9666a4b508a5f9c9319f3646f375"
+    },
+    "thetao_2012.nc": {
+      "bytes": 134295566,
+      "sha256": "d7b4bb4026d0bc6ce30c1c5c02a7e9a6d7160084bf97add5313ef1343581ce3e"
+    },
+    "thetao_2013.nc": {
+      "bytes": 133928712,
+      "sha256": "b81ad0ec7028de4fcf33accdb76311b793e84fd5aab6029879025c07f7f7de9b"
+    },
+    "thetao_2014.nc": {
+      "bytes": 133928712,
+      "sha256": "70e7f5d7e61eedc3e53ed587c62c0a0da9cea9f453d271376192d28d151f0024"
+    },
+    "thetao_2015.nc": {
+      "bytes": 133928712,
+      "sha256": "3eebecc3a68ba56ab600e1bfbb468b422303892388ec7012751162370decf6e3"
+    },
+    "thetao_2016.nc": {
+      "bytes": 134295566,
+      "sha256": "9a919a2e4466868fcc51e3191444ecda195b8959a0d709c424266569cf0ec836"
+    },
+    "thetao_2017.nc": {
+      "bytes": 133928712,
+      "sha256": "e04f233c5000ebc7ec3c7b12bba0707ee8e7695b945f2f9038d9c7ee924407cd"
+    },
+    "thetao_2018.nc": {
+      "bytes": 133928712,
+      "sha256": "abb1083891de9603f3fe543aff88228491c60e754eed527a3095e1c70734c922"
+    },
+    "thetao_2019.nc": {
+      "bytes": 133928712,
+      "sha256": "56deadb30523bfb58f9f9fe183c9ec2daac363a38f8de3d8356cff51f8112aa7"
+    },
+    "thetao_2020.nc": {
+      "bytes": 134295566,
+      "sha256": "b5d614f14a5b908b3f6aa091ca08c8e0f9b63868c709b0d0002650073f1b80b6"
+    },
+    "thetao_2021.nc": {
+      "bytes": 133928712,
+      "sha256": "19ac4726a59c90a1ce595e1fd56cf64ce4141f281f105da99a0f664d0989033c"
+    },
+    "thetao_2022.nc": {
+      "bytes": 133928712,
+      "sha256": "aa17997da11bd15d87592873a4d2f45861c894765ddfdedc63cc2dd4c06acaa5"
+    },
+    "thetao_2023.nc": {
+      "bytes": 133928712,
+      "sha256": "ccce27fa3c2499fe828dc43355ec1cfb3bab73e06d06bf0fdc8a2bff72c3975c"
+    }
+  }
+}

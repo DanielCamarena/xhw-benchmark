@@ -1,0 +1,462 @@
+{
+  "case": "era5_peru",
+  "created": "2026-10-17T08:38:08+00:00",
+  "xhw_version": "0.0.1",
+  "distribution": "NetCDF files are release assets (ignored by git); this manifest is in git",
+  "mask_files": "boolean and flag layers only; temperature, reference and threshold omitted",
+  "files": {
+    "air_over_land_tx90_mask.nc": {
+      "bytes": 736137,
+      "sha256": "ea1b5b0f900ecdfc09d74208636e220af7e8c114a6d534e0b31fa208dbb07e11",
+      "content_sha256": "76d7c27669ed2426027c1dc4325e55b44bf6eb7330a6dcd9f28d0ab33ed96c39",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "land_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_land_tx90_catalog.nc": {
+      "bytes": 3023822,
+      "sha256": "61b7c31dc5ac34417b8cf23f8855709fc969124057e4317bb05319f3abac7b96",
+      "content_sha256": "a68e91343ac8eb5a5c9862b9099d64235aa4c401c3043575bd23c5bdd97b417b",
+      "dims": {
+        "event": 43506
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_filled_days",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline"
+      ]
+    },
+    "air_over_land_tn90_mask.nc": {
+      "bytes": 714119,
+      "sha256": "1b054be44833b0b98275e387092ccf5d4f43a62f45cce5de1cd5da5fe136b874",
+      "content_sha256": "69f6b95f7a9399a76a4dc5300a6cbf6d410d425132a713c46c1d9185c2ecb5d2",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "land_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_land_tn90_catalog.nc": {
+      "bytes": 2839365,
+      "sha256": "7da85b24cded9baf1e3079b6463a6885d8e3c26d8b4dd5436e512295ed7c09f2",
+      "content_sha256": "f278b42320e34b60f27a49166c4b360ae3534cd0faab004811b099229d2ec840",
+      "dims": {
+        "event": 41252
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_filled_days",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline"
+      ]
+    },
+    "air_over_land_txtn_lag_0_mask.nc": {
+      "bytes": 504761,
+      "sha256": "c7cf85bf983815c94fbc248e211b0b4b53be01b89fc476f7ea63ea3db39fdb50",
+      "content_sha256": "5ee8f783cc4b3569d9c1a2cfdb441f189da8a1561120476015cd27b7e5eceed1",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "land_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_land_txtn_lag_0_catalog.nc": {
+      "bytes": 1304097,
+      "sha256": "554c1e5a73a8d3d6efb81642f59fda31a3dd80bcf2223d0ba3a4aeb977c5ab91",
+      "content_sha256": "62b2ded87f93b94ffd2741f42d6d7d67e60c946dc391fa49191650c5eaf425af",
+      "dims": {
+        "event": 8921,
+        "component": 2
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline",
+        "n_filled_days"
+      ]
+    },
+    "air_over_land_txtn_lag_1_mask.nc": {
+      "bytes": 520806,
+      "sha256": "dcb2d4efba7bd6cac1d10d5bb150b99a17fa0e171db02718e94a10b45557bd94",
+      "content_sha256": "70b9a9bdd1066b9cf323afb7a65c6f5db4a5355adecd76afe34c4d227bbac8cb",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "land_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_land_txtn_lag_1_catalog.nc": {
+      "bytes": 1435477,
+      "sha256": "6b3f9ea2f9791906d0d87cec4a4d45a77df33a22fc7eda3593789a09e705f4f7",
+      "content_sha256": "d33bd649d568861a36ae234f4dabd31fdb299ccabf1caf25c55fb9718fc13ed1",
+      "dims": {
+        "event": 9941,
+        "component": 2
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline",
+        "n_filled_days"
+      ]
+    },
+    "air_over_ocean_tx90_mask.nc": {
+      "bytes": 513581,
+      "sha256": "ebd30cf6958eb1af62cee3a9c7f4c4e321a977412c9f6f5a32735366b209d481",
+      "content_sha256": "0e179f5484dccd253bad0cce6b6675cec341ba14ba2c9a1d1905f41a5c4c1875",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "ocean_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_ocean_tx90_catalog.nc": {
+      "bytes": 1994870,
+      "sha256": "871197f8f3a0caca5697d962e7f2b42261f70f31ec3cccb35025b13a6bac13d9",
+      "content_sha256": "9422620ea5f207321cc451209f58cedd77fd6a6c7136a1655d88750e1672199d",
+      "dims": {
+        "event": 28552
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_filled_days",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline"
+      ]
+    },
+    "air_over_ocean_tn90_mask.nc": {
+      "bytes": 509510,
+      "sha256": "80ca8fd9b52c84ae8793558860e3301f81753900b1254abe71e904985a57a4d8",
+      "content_sha256": "e0b5d360c7a4a7771f2ca876337ef8fe07e2292d1a461802f16240fdd5d89c49",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "ocean_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_ocean_tn90_catalog.nc": {
+      "bytes": 2080822,
+      "sha256": "2c05b42009bf293c0a64fe200e75d98a33d6c07c55eab0669eb1d7e7ae4f2149",
+      "content_sha256": "a1a11060d905a485e0a17a32ced901e180be84042b9f0ccdc2062c981f74974a",
+      "dims": {
+        "event": 29955
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_filled_days",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline"
+      ]
+    },
+    "air_over_ocean_txtn_lag_0_mask.nc": {
+      "bytes": 489674,
+      "sha256": "003984ca840d2dd3e3986977ac73c1b63fa49c9f830d5a776ba24b433603ca56",
+      "content_sha256": "b8a11bc79d173e89d965db59ab4c78380d13f91f0ba0ac70cb95cdb471708cab",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "ocean_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_ocean_txtn_lag_0_catalog.nc": {
+      "bytes": 3339283,
+      "sha256": "838e9983cc45fe1b11bbd1fc8c52a3299cb41c420718d45c871a6ecd8bceda71",
+      "content_sha256": "03e200d8fd9bdcb45b98275e4b2eb9bc390473ad1ccea31b66e860f3cd55942c",
+      "dims": {
+        "event": 24155,
+        "component": 2
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline",
+        "n_filled_days"
+      ]
+    },
+    "air_over_ocean_txtn_lag_1_mask.nc": {
+      "bytes": 487467,
+      "sha256": "26ff21bf581b5c19ed6fdfbcd5a6974b8c9768d893133daeb17f1f1aab63a42f",
+      "content_sha256": "c671f4ebb7bcc12e7cda601dad59f831bd6452a7eb5dbb07c7825bb9d7d0ef7e",
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "exceedance",
+        "event_membership",
+        "joined_gap",
+        "valid",
+        "invalid_reason",
+        "ocean_mask",
+        "cell_area"
+      ]
+    },
+    "air_over_ocean_txtn_lag_1_catalog.nc": {
+      "bytes": 3226173,
+      "sha256": "8c5af75c97ba503f972c942197ac2effa91d1b054512625bb068b00e2184369c",
+      "content_sha256": "05e4b97a428e4fc85ef69e9851d98ad4ddc28a1226427870118871d704d73b3a",
+      "dims": {
+        "event": 23262,
+        "component": 2
+      },
+      "variables": [
+        "event_id",
+        "start",
+        "end",
+        "duration_days",
+        "n_exceedance_days",
+        "n_joined_gap_days",
+        "left_censored",
+        "right_censored",
+        "censor_reason",
+        "qualified",
+        "contains_forecast",
+        "index_latitude",
+        "index_longitude",
+        "n_missing_days",
+        "peak_date",
+        "intensity_max",
+        "intensity_mean",
+        "intensity_std",
+        "intensity_cumulative",
+        "intensity_max_rel_threshold",
+        "intensity_mean_rel_threshold",
+        "intensity_cumulative_rel_threshold",
+        "temperature_max",
+        "temperature_mean",
+        "rate_onset",
+        "rate_decline",
+        "n_filled_days"
+      ]
+    }
+  },
+  "total_bytes": 23719964
+}

@@ -1,0 +1,427 @@
+{
+  "format": "xhw-test-datasets-1",
+  "created": "2026-10-12T06:13:38+00:00",
+  "compression": {
+    "engine": "h5netcdf",
+    "filter": "zlib",
+    "complevel": 9,
+    "shuffle": true
+  },
+  "datasets": {
+    "oisst": {
+      "file": "oisst_peru_1991_2025.nc",
+      "sha256": "7cd1dc033d3ff1619022783a78bba636b473de96a65a390285f17bf641f2db25",
+      "content_sha256": "0cce0fce239857f8ff48407dd59b437495da916d54c354c954ae7b50c6db13c2",
+      "bytes": 5109281,
+      "dims": {
+        "time": 12784,
+        "lat": 32,
+        "lon": 20
+      },
+      "variables": [
+        "sst"
+      ],
+      "note": "NOAA OISST v2.1 AVHRR-only daily SST, degC, 0.25 degree (registered input).",
+      "operation": "lossless recompression",
+      "derived_from": {
+        "file": "oisst_v21_peru_1991_2025.nc",
+        "sha256": "014bfb6556fb29d8ef3b67fef7ae878e2fc1e5ea73c3b825d88b9055cbd4cbb9",
+        "content_sha256": "0cce0fce239857f8ff48407dd59b437495da916d54c354c954ae7b50c6db13c2"
+      }
+    },
+    "era5_daily": {
+      "file": "era5_peru_daily_1991_2025.nc",
+      "sha256": "a8ca1b894c8ca522aa2d4713c9defdb24c10a60502470c47ef3b64914e62cfbd",
+      "content_sha256": "5b4d584e24ea5edd617694a9307a29cce09ff52d67f3da4fa57ebadb0acbf79d",
+      "bytes": 69946968,
+      "dims": {
+        "time": 12784,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "tx",
+        "tx_n_samples",
+        "tn",
+        "tn_n_samples",
+        "tx_t2m",
+        "tx_t2m_n_samples",
+        "tn_t2m",
+        "tn_t2m_n_samples",
+        "lsm"
+      ],
+      "note": "ERA5 local-day (UTC-05:00) TX/TN from mx2t/mn2t plus a t2m contrast, in K (registered input).",
+      "operation": "lossless recompression",
+      "derived_from": {
+        "file": "era5_peru_daily_1991_2025.nc",
+        "sha256": "74c7aa86ab6eb83273d02a3b942f16a87d00c8af81457837c5a54e31339caa60",
+        "content_sha256": "5b4d584e24ea5edd617694a9307a29cce09ff52d67f3da4fa57ebadb0acbf79d"
+      }
+    },
+    "glorys_decimated": {
+      "file": "glorys12v1_peru_decimated_1993_2023.nc",
+      "sha256": "b75f1c321696348b638abbe086bb4b75dfcabfc4eacfa4162f7dc1794ab4791f",
+      "content_sha256": "e17d689ed24491da1978abd6bcaa260cf53ba2215b08dca4936e7fd4338b5a8c",
+      "bytes": 13251677,
+      "dims": {
+        "time": 11322,
+        "depth": 12,
+        "latitude": 13,
+        "longitude": 8
+      },
+      "variables": [
+        "thetao"
+      ],
+      "note": "GLORYS12V1 thetao (degC) on the voxels used by the GLORYS tutorial.",
+      "operation": "decimation: every 8th latitude and longitude, retained levels, joined in time",
+      "derived_from": {
+        "files": {
+          "thetao_1993.nc": {
+            "sha256": "0226e42fe0f3be428147319b364f09821629ac77acd41b1cac16e246b18c94f9",
+            "content_sha256": "d221e676d1572ce99524685574a2c8524b01e32e339e9991a660bae149dc20c8"
+          },
+          "thetao_1994.nc": {
+            "sha256": "1a206058834870f3bb928f1f93a39253949c264eee2810177590cceb041ad8b5",
+            "content_sha256": "50de8c1634ee1836b8f22de8e0df1b252b52b7dc80640f9310811d1c595dd853"
+          },
+          "thetao_1995.nc": {
+            "sha256": "c3f8c82b3d46024bdaf5c1b3f6ec1ae1fe2670a47026bbb55ec5dbab32b937f4",
+            "content_sha256": "637c6b6ba2e00b5fc25aaded984e7ac924aec17f49ccc976c73be05d08dba03f"
+          },
+          "thetao_1996.nc": {
+            "sha256": "82ac865f6e3df0ec1dc47af302cfd9357736c3409d30ebdb5e749f999b7dee9d",
+            "content_sha256": "92b5ab2d0319cf73b6c17ddc5c09287ab75d22e825a475917382798fd3997d2d"
+          },
+          "thetao_1997.nc": {
+            "sha256": "982a02901f5c3466229006c15b587f8bc434a2801561fee3ef92f801d1a5d2c1",
+            "content_sha256": "2154a592c34272100cbdc06585828ce5cdd3642080201c327ab549c7b79c7fa2"
+          },
+          "thetao_1998.nc": {
+            "sha256": "736014ba6be6a2c0648d49150c8e1de9747ee429c62e167c3b4fad5531685507",
+            "content_sha256": "a15dfbeca5e698ade956f54d9f67cd792343688c389af4c8889e530a49c9c853"
+          },
+          "thetao_1999.nc": {
+            "sha256": "9479cecb3c5ecd10c4ebe01ec3fb10940fc10b84c5a656595e4047e0ee458bf0",
+            "content_sha256": "e5b433ea1d1d428cb60003565cc4208e1b7158a6f3f34b74177986a07e291701"
+          },
+          "thetao_2000.nc": {
+            "sha256": "2a6f810ebb1c22253858806410659f52ac523d625dd91c7fbaed8accc6dd2552",
+            "content_sha256": "65d478d2739e5719703d23e036a1a3bb67eed5ad6fedc2c51197658f58eac7e6"
+          },
+          "thetao_2001.nc": {
+            "sha256": "1f71334fffa5dcedce6659e45d55d2573b410fa4de1d12c7c2ad8cd2d7caca5b",
+            "content_sha256": "94d09940e74e8205daf1300c7007bad69196a0ead273591c81b13ea0cfd0d62d"
+          },
+          "thetao_2002.nc": {
+            "sha256": "9de8867d37f6db6c7e725249101e542b9f821dbbc6c45f776e07c71f19fe792c",
+            "content_sha256": "55834195a9896687a7f64e2b2c9f5966d37afcd2cc126264d7df1ea0d33dbd74"
+          },
+          "thetao_2003.nc": {
+            "sha256": "e11822651f9c9e2244a1f9981ce302f254858f7dae0c42816eb5f0508a34b911",
+            "content_sha256": "53d9ff12b165de3ede5d96df27f9b165e4af5e894ebc3c86e4a525831de0d560"
+          },
+          "thetao_2004.nc": {
+            "sha256": "53c7f7468c597693e519696a2f13b9acf38dbecddcda53d73047ced0b110c211",
+            "content_sha256": "3ffe91dd64a85d6627c1ef9128481842dd9b3ac96d1825f6d1e41d50cb300cde"
+          },
+          "thetao_2005.nc": {
+            "sha256": "ced97282e4ecd6bc22fd4d375f29006876176ad34e97a4f5972a8076e0d09600",
+            "content_sha256": "6c307a90b1972ef99c794f6edea3c80069ae3962a465b757ccec41e10077730e"
+          },
+          "thetao_2006.nc": {
+            "sha256": "f434353b1e68c8ba921c1dddf683ea6de227cdd06c1f425237421b39633df387",
+            "content_sha256": "56ce36a060a5c8562479478cc51a0832ccee65f28e2174912a4cc57a5c75ee7f"
+          },
+          "thetao_2007.nc": {
+            "sha256": "90ec70a7a4f073f27444be5e5ccb5d2c3528dae88337abc49cc7ebd0faa4d0bc",
+            "content_sha256": "a5a3ed64be476e1552fbd8ebe268c5fdeaae789c90e4e09c25580ad8e3c5d92e"
+          },
+          "thetao_2008.nc": {
+            "sha256": "479743b576d30fb28463fc2a69e150ff37a0f977c59e7f0c8ea68b2cf5d61ee4",
+            "content_sha256": "271d4eb28399aefc61f04508d7e43e4bee4a9dcf44d7d667b0b6719cb92b53ce"
+          },
+          "thetao_2009.nc": {
+            "sha256": "8d86951465ddc410596f8557a72147c5ac8441fbe757bb15a8112045a2554cfd",
+            "content_sha256": "3324bb570fefb20530b36371d5f9b88bc86ea85cc73825d12a6b3018b2808d85"
+          },
+          "thetao_2010.nc": {
+            "sha256": "12f492f11a3a95e46220adb4b8de61c419b3db19b5377c18c862afef95434ce3",
+            "content_sha256": "c6a58ac756a69bb488da127c1e843c53bc6c4a68e95a647ad385dae4317bc376"
+          },
+          "thetao_2011.nc": {
+            "sha256": "d19fdbd0de78f69c284ef3134cce8c3ddd5b9666a4b508a5f9c9319f3646f375",
+            "content_sha256": "4b529e1a4a0a8f3e081aa6371ebe68f49fb0e6a6a12c7810e0d4893b4833baba"
+          },
+          "thetao_2012.nc": {
+            "sha256": "d7b4bb4026d0bc6ce30c1c5c02a7e9a6d7160084bf97add5313ef1343581ce3e",
+            "content_sha256": "76ecf260da56d41caded512da4c5c75dffe855dd2548810bdcba198484f6bfad"
+          },
+          "thetao_2013.nc": {
+            "sha256": "b81ad0ec7028de4fcf33accdb76311b793e84fd5aab6029879025c07f7f7de9b",
+            "content_sha256": "234d88f4d48fdcff71f9deccefddddd19ebd29e3509b11cee0af9e95b5f1f993"
+          },
+          "thetao_2014.nc": {
+            "sha256": "70e7f5d7e61eedc3e53ed587c62c0a0da9cea9f453d271376192d28d151f0024",
+            "content_sha256": "b364265d902842ac6e135fe9a04d5c5a96a616c94b83d3d52befa87136f40ec7"
+          },
+          "thetao_2015.nc": {
+            "sha256": "3eebecc3a68ba56ab600e1bfbb468b422303892388ec7012751162370decf6e3",
+            "content_sha256": "664f5d981b01d307f3e9021127bf50591c8967cf7ba06fab263e857e2ec1cd10"
+          },
+          "thetao_2016.nc": {
+            "sha256": "9a919a2e4466868fcc51e3191444ecda195b8959a0d709c424266569cf0ec836",
+            "content_sha256": "0f6497a92ab3932a410a47f72cc8a8c836fee0841418f7348c6c888f8922cf3d"
+          },
+          "thetao_2017.nc": {
+            "sha256": "e04f233c5000ebc7ec3c7b12bba0707ee8e7695b945f2f9038d9c7ee924407cd",
+            "content_sha256": "5167b062cc552698c05422abfc66f6f75c2e758564f454f74c79289d104a445e"
+          },
+          "thetao_2018.nc": {
+            "sha256": "abb1083891de9603f3fe543aff88228491c60e754eed527a3095e1c70734c922",
+            "content_sha256": "d78e25ad8ff122b03d3b83025730ad76de3bfe36c7940ed9c7f8ba02b18f3e82"
+          },
+          "thetao_2019.nc": {
+            "sha256": "56deadb30523bfb58f9f9fe183c9ec2daac363a38f8de3d8356cff51f8112aa7",
+            "content_sha256": "e86bc21dcf5eca8e450b2646800183df57244095732cee91c2849dd6e16bcfaf"
+          },
+          "thetao_2020.nc": {
+            "sha256": "b5d614f14a5b908b3f6aa091ca08c8e0f9b63868c709b0d0002650073f1b80b6",
+            "content_sha256": "bcdd44b9ec8a6eeffe2de7516b3e9d5075b265f531cfd22e54b57850ab88b9ba"
+          },
+          "thetao_2021.nc": {
+            "sha256": "19ac4726a59c90a1ce595e1fd56cf64ce4141f281f105da99a0f664d0989033c",
+            "content_sha256": "38e67c09cfbb3d2b5b4f87c5b9bfeded894280aacacf2b55f8f50479a60a72ae"
+          },
+          "thetao_2022.nc": {
+            "sha256": "aa17997da11bd15d87592873a4d2f45861c894765ddfdedc63cc2dd4c06acaa5",
+            "content_sha256": "fee6b7145247c41e8ed672d6a3ed243b13fa53047a54489b30bc2a42e7796045"
+          },
+          "thetao_2023.nc": {
+            "sha256": "ccce27fa3c2499fe828dc43355ec1cfb3bab73e06d06bf0fdc8a2bff72c3975c",
+            "content_sha256": "da02e698f57bc77641b05c8bcce6cdd03a5ab8ed4006fa851298c58ec3094716"
+          }
+        }
+      },
+      "decimation": {
+        "levels": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22
+        ],
+        "horizontal_stride": 8
+      }
+    },
+    "ostia": {
+      "file": "ostia_peru_1991_2025.nc",
+      "sha256": "de04c496555e6d35523ce568efcc8b89ea1aaf95d7f21f2e5265725c86ade01c",
+      "content_sha256": "5ad5f7b50e239f3f60dbd74187a3b6f71130d8c0fb2f973716d291a8a5a6f990",
+      "bytes": 110196731,
+      "dims": {
+        "time": 12784,
+        "latitude": 160,
+        "longitude": 100
+      },
+      "variables": [
+        "analysed_sst"
+      ],
+      "note": "Met Office OSTIA reprocessed analysed_sst, kelvin, 0.05 degree, dataset METOFFICE-GLO-SST-L4-REP-OBS-SST version 202003.",
+      "operation": "yearly files joined in time",
+      "derived_from": {
+        "files": {
+          "analysed_sst_1991.nc": {
+            "sha256": "ad9ccfc505800b7078b4016f543e9c619b8a7c37640272cd5703623bceaba728",
+            "content_sha256": "af7c5ad022678e6c40559eb7ccd98e41cd1980f037ebba95941d9cc23fe5accc"
+          },
+          "analysed_sst_1992.nc": {
+            "sha256": "4fe2a3eac2ae64c58b34279ee2d9697d0b98930cd31cfdc10f200ab34c608623",
+            "content_sha256": "b161b5c922d0355f054b3abc4c11147e1e800db270a0044505a1cddfc977eaae"
+          },
+          "analysed_sst_1993.nc": {
+            "sha256": "6b2b0995e7270f1308664a0bee56f481692f4021ba49e79ad075cda572b41d24",
+            "content_sha256": "26c5b9d8bf7d800208cbf634687ebbc0c72647bc76a39bc3adaa0a15b6758e80"
+          },
+          "analysed_sst_1994.nc": {
+            "sha256": "8c602527298baba12e27dde5f7b5b3f947ed15285ca049e94e0513c67beea1dd",
+            "content_sha256": "6b18495545fa77217b51098829795108694fc4fbf0938a9f8b8ad7f383df955c"
+          },
+          "analysed_sst_1995.nc": {
+            "sha256": "d8df5b26713f018de06248b1affc3c42a94d6894a2d1f9cb7cee294d50c24997",
+            "content_sha256": "f7686e423ed395b9579c981dad4fe833c4c3f72117de4b0ef9c9f5d6b3678c23"
+          },
+          "analysed_sst_1996.nc": {
+            "sha256": "65b4c28fb7c789a48f330e8e981387e320087849e9373ca01a473f6a68b39439",
+            "content_sha256": "eef73f798eab748a3b4954867c75d20237640412a4892c8cc42fed3e3417eae3"
+          },
+          "analysed_sst_1997.nc": {
+            "sha256": "5de4c41b88f774a0b5aa25f98d88ba699a17b1e071890171c1bd41dec270665e",
+            "content_sha256": "7309ef603c5e4d03fee500e62faa818177c02a84a3f3181b19a481ceafce8341"
+          },
+          "analysed_sst_1998.nc": {
+            "sha256": "185974f03f7c1c167de66bff1eaa9ab3d43df07ce3366b5168dc8fb764971acd",
+            "content_sha256": "ae0789a243cad4dfccb0d51522d52fd5dab8f4df5b038788deba605f7b933f04"
+          },
+          "analysed_sst_1999.nc": {
+            "sha256": "32f1c52c3cad2324ccafb680d858329561044002f3d5e4862a329d570e976fb4",
+            "content_sha256": "964c0f70d96e62b4db932337664638352b1189e09195d73502af14729cd99e20"
+          },
+          "analysed_sst_2000.nc": {
+            "sha256": "55b9888a9abd873d5a7163b0b43e0adf4054e6bd197ae55c63f82a4c97711d90",
+            "content_sha256": "cc61c6cc71ee4e6fe37ea83c7793667b1932810ddd6378a29c088b5dbed8cc2e"
+          },
+          "analysed_sst_2001.nc": {
+            "sha256": "751d7ba521ac06ce3d5690bf767c691a6cd9c1b480272d2160487327060b74eb",
+            "content_sha256": "d9769807bbe1753ee268ed64bde6a008edee797034e0932ff1cee9d22ac23a50"
+          },
+          "analysed_sst_2002.nc": {
+            "sha256": "0dd751e2e5fab33b8b3a2369efafe85e335f36c029e425c36062682020501edb",
+            "content_sha256": "13d4f6a0b039902f8c185f3d8a404d66ceeeb46116fad823a4bfca504e93e7de"
+          },
+          "analysed_sst_2003.nc": {
+            "sha256": "080162eb10f01e97721f046f4e5aeea37c9c9ea2ca5e6a8d4a59bf9b240e6251",
+            "content_sha256": "372925d2d63b15f45d03c3fba47c6aacaa3f68e026d716064022d4eadadf44ce"
+          },
+          "analysed_sst_2004.nc": {
+            "sha256": "63e0c0ba0cf26c549eb62b26e89fe1b4845c21c64008f89f0c49b4fb70d561cc",
+            "content_sha256": "ce5da8a9370333533f6c084351097de1355fd84afb13872fa44ebc808b89f067"
+          },
+          "analysed_sst_2005.nc": {
+            "sha256": "b581569309efcc1a1681072c387abdd662f2caa16a3ef285d8c3ecc37acdf0a6",
+            "content_sha256": "98671bfa71ae49dd91142447d7a17b00f558735d3e7de4e438dca247b9450c31"
+          },
+          "analysed_sst_2006.nc": {
+            "sha256": "daac26827e954848b5830c5960aa9e13846a28ae8ff7da3e5e5c207a0a04a9ab",
+            "content_sha256": "6925b84399b72259c73ac8510f45a8d9899b1895882f3fb53717f10160f75886"
+          },
+          "analysed_sst_2007.nc": {
+            "sha256": "36d305e95f1cfa390faa7966411407380f2ea0770c5d6f14d24397fe8cb42e16",
+            "content_sha256": "8770694ab7a79c36856358403651846d74f4dc213f1615bda6972a33d87003ab"
+          },
+          "analysed_sst_2008.nc": {
+            "sha256": "819ae49dd7dec0813902e61ab6176de8f1b84a6a9d727f041b1188c37d35e69a",
+            "content_sha256": "c731ff4b9e93223989f7bcfe4373095cb33f589ed296344ae2470498016c0b0f"
+          },
+          "analysed_sst_2009.nc": {
+            "sha256": "91d87ac66bac7e8265cfb822c372974118782703216ecaf9b8be983d20aa8457",
+            "content_sha256": "9d938be1513bbb165c4ef35609c1b72e166cf9962b936dc0331efef50ee8dff9"
+          },
+          "analysed_sst_2010.nc": {
+            "sha256": "a2e52239696baae0e42b8380d13e769b368be0db3b15853641649a441d360aae",
+            "content_sha256": "437c08fa657084bd9d2f459e1e23c3add5705a1c05010518766dd675af34b594"
+          },
+          "analysed_sst_2011.nc": {
+            "sha256": "9d0609c1a6ec2a15053706425260ed03645b2ad2d0d95d75269c5dd9b1138f40",
+            "content_sha256": "2770834b348ae4363471994a528eee5e7dc567fc58f5d9bdf3247e9d0e3b8754"
+          },
+          "analysed_sst_2012.nc": {
+            "sha256": "3360dbccf4b686689fdbd1380fafc72939178c1a41b7b7d0f8b7a1f659a891e3",
+            "content_sha256": "acfecd1e61e8bde231c2781d59921d9da3b51ed8e16f1f1ac085c71efc82656d"
+          },
+          "analysed_sst_2013.nc": {
+            "sha256": "9d609b67f7c3a1821da55e5f1f8039160eb49eaa7aa6459dce4d65a24b1408b3",
+            "content_sha256": "ae7fe8175ac582b4eafd3fb54909485a20d235cc7feab08fd1ab25be5f4096c9"
+          },
+          "analysed_sst_2014.nc": {
+            "sha256": "2052f7d6c10db04656af91c042b1aa2a946ecd8ee3f2fd44589e1c716dbe625c",
+            "content_sha256": "56c9b7d2d0cbdd81c63f8ff80699ffd6f5fe522b0da8b8e8bf7240b7d1685206"
+          },
+          "analysed_sst_2015.nc": {
+            "sha256": "f87a665446aeaf0cfb0b517f504fad1ad053f312ea752eeffcb8bc480fc1aaeb",
+            "content_sha256": "c6095205557cdecbc20795abf9e5bd76b9b7025714a4e0434466e0bb5320a1e0"
+          },
+          "analysed_sst_2016.nc": {
+            "sha256": "81f78ea88fad429e14a9f806ca0bb654acea89009058a432cccfea01340411b1",
+            "content_sha256": "128990ecec0aab865ce6a5a9870528c21bddb0d5e7aedc597848e56a9da1fb79"
+          },
+          "analysed_sst_2017.nc": {
+            "sha256": "a2edcdd3e3e623af6e8bd2c52807a4bf5daca44df4ac1c248cfb7c9c44408f84",
+            "content_sha256": "c2973725b5b58a9ce94ff9a6d088bbf48ec05795ea0374b61d70b6a8acf4f4ed"
+          },
+          "analysed_sst_2018.nc": {
+            "sha256": "b1b5ed477a378aadc741727534c367d27713594c69518f4777628126d81360e2",
+            "content_sha256": "c5ebb77094cbccb6c77ce9f185849d542e8c9225d9b388e8b02cf8768b179af9"
+          },
+          "analysed_sst_2019.nc": {
+            "sha256": "6376c07e2330cb33693e95d37150d48409ebd04d152975a63679a49f78bdca2b",
+            "content_sha256": "ad597d37c4ee749fe1a237219531cb7c25bbe09a1278a4a42018959f5888d15e"
+          },
+          "analysed_sst_2020.nc": {
+            "sha256": "633ae91f42a80af9c13aa814f6ea8fb320df4392a611866dba8d591dd3c9dd7e",
+            "content_sha256": "91142edf2c3981f7576a5ab31cfaf0d13507382914b713a1ccd876a63d2ceb66"
+          },
+          "analysed_sst_2021.nc": {
+            "sha256": "25ca25b1dd483c81390c1a1d8c2e14a89f775bd29d4034c29973e65ae6222355",
+            "content_sha256": "3d2d8d603d12ba9b621da80d92e54eee32381a60092cbf4e8e86b67429da1d76"
+          },
+          "analysed_sst_2022.nc": {
+            "sha256": "c7f8b014fb3acaf370ec91937452aeb8e8d67aee408741936d4c5adf9f057622",
+            "content_sha256": "ee9e1af7714dda27e0d81d106c8d6fc807221edc39068f988cb7ecb0d64f308b"
+          },
+          "analysed_sst_2023.nc": {
+            "sha256": "c578414896c211c613a02d5a7568368dc735635db3807c5f998567d702df861c",
+            "content_sha256": "6b01dd5c76e379699c9cb645fdde66cf67ce6d255898cc99f816c6fe2f1a8a1e"
+          },
+          "analysed_sst_2024.nc": {
+            "sha256": "a718f02b22ea2e44fd54a44b102eca3baeb7e75d44ea6abd15800008368a07fd",
+            "content_sha256": "cb9ef991d4ed20fd96315cf5753e5add0f1682f1300e486083c483db9282707f"
+          },
+          "analysed_sst_2025.nc": {
+            "sha256": "6e56010a6980c5abb16dd66e8e3437c1cbd64536c6194a9a1e6ccf246a0b55d4",
+            "content_sha256": "27e424e4c29769cffd67672ac1366c687d0a7ceebac589149540bb708876cb9e"
+          }
+        }
+      }
+    },
+    "era5_hourly_sample": {
+      "file": "era5_peru_hourly_sample_2023_03.nc",
+      "sha256": "e4dab0a097b19f9e0bf10a7effc2e470cb89f06ac8bbe87c5c7a41752ddca9a7",
+      "content_sha256": "76f689f3aa131733e423e6c2dd391882acfcd2cdb03e39c726b33ec4e1c05e27",
+      "bytes": 430368,
+      "dims": {
+        "valid_time": 96,
+        "latitude": 33,
+        "longitude": 21
+      },
+      "variables": [
+        "mx2t",
+        "mn2t",
+        "t2m"
+      ],
+      "note": "ERA5 hourly mx2t, mn2t and t2m for 2023-03-01..04 (the aggregation demonstration).",
+      "operation": "selection of 2023-03-01..2023-03-04 (hourly), values unchanged",
+      "derived_from": {
+        "file": "era5_peru_hourly/2023.nc",
+        "sha256": "cb2f6eed1a6540a64d99ea7054c7a9ef41e639dc66213356692ab72e6aea8944"
+      }
+    },
+    "oisst_equatorial": {
+      "file": "oisst_equatorial_1991_2025.nc",
+      "sha256": "b868276e527984b077385e5a7f7c57f0eae99878771b821916d9cef4d4dfa64d",
+      "content_sha256": "f7b6f66166876ae70f5a11629200b26131f46ee1ecfa6afb90ee0effd20492e7",
+      "bytes": 100169749,
+      "dims": {
+        "time": 12784,
+        "lat": 40,
+        "lon": 200
+      },
+      "variables": [
+        "sst"
+      ],
+      "note": "NOAA OISST v2.1 AVHRR-only daily SST, degC, 0.25 degree, equatorial Pacific (Nino 3.4 box) 5S-5N, 170W-120W.",
+      "operation": "lossless recompression",
+      "derived_from": {
+        "file": "oisst_v21_equatorial_1991_2025.nc",
+        "sha256": "a061ff363081818ed36debd7d460899854d7340cdf9fdb2ae80a79112a9ab0fe",
+        "content_sha256": "f7b6f66166876ae70f5a11629200b26131f46ee1ecfa6afb90ee0effd20492e7"
+      }
+    }
+  }
+}
