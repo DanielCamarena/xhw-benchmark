@@ -85,6 +85,9 @@ and [API](https://github.com/DanielCamarena/xhw/blob/main/docs/API.md)); `Source
 
 ## Optional acquisition scripts
 
+The scripts described here are those of code version `v0.2.0` ([changes](../CHANGELOG.md)). They
+do not change the registered data (`data-v1`): a new retrieval is a new run, as explained above.
+
 Six scripts in `examples/` fetch the registered regional selections again (OISST, ERA5,
 GLORYS), add the high-resolution SST products used to study the effect of resolution (OSTIA,
 ESA SST CCI), or add ERA5 pressure levels. They need network access, source-specific clients
@@ -152,7 +155,8 @@ pass, so the transfer does not grow with the number of boxes. The snapshot is pa
 piece's identity, so pieces of two snapshots are never mixed; the default snapshot is the
 registered one, `1H5D09GQTBHSNHGT67TG`. Coverage and preliminary days are checked before any
 `sst` is read, and a month with preliminary days is never saved. NOAA's attributes are kept;
-`source`, `store`, `store_snapshot` and `history` are added. Check the
+`source`, `store`, `store_snapshot` and `history` are added. A box's pieces (one per year) are
+joined one at a time, so memory holds one year of the box. Check the
 [NOAA product page](https://www.ncei.noaa.gov/products/optimum-interpolation-sst) for the
 product description.
 
@@ -166,7 +170,7 @@ registered 72-request plan is reproduced with
 (`expver` 0005) are rejected unless `--allow-era5t`, which marks them in every file and
 product; data without `expver` need `--accept-unknown-expver-before DATE` and a
 justification. `--daily` reads only the files of the current plan and calls
-`xhw.aggregate_daily` year by year: TX is the maximum of period-ending `mx2t`, TN the minimum
+`xhw.aggregate_daily` month by month: TX is the maximum of period-ending `mx2t`, TN the minimum
 of `mn2t`; the `t2m` extrema `tx_t2m`/`tn_t2m` are kept as a contrast (`--no-contrast` omits
 them). Other variables get one daily file per statistic; accumulated ones become mean fluxes
 in W m-2, or a daily total for `tp`. `--derived` adds the products of `examples/_derived.py`:
@@ -183,13 +187,23 @@ name and units of `fdir` were not checked against a real answer.
 `--consolidate-years` also writes one hourly file per year with the three default variables
 (`era5_<region>_hourly/<year>.nc`), the layout of the registered input.
 
+*Memory.* Each daily product (and each consolidated year) is built in blocks of local days
+(`--daily-block month`, the default, or `year`): the block's hours are read, aggregated and
+appended to the file before the next block, so memory holds about one block of one variable.
+One month at 0.25° over 260 000 cells (150°E–30°W, 30°N–60°S) is 0.76 GB per variable in
+`float32`; the measured peak was about four times the hourly data of the block. The block size
+does not change any value: month and year blocks give the same `content_sha256`.
+
+Pieces are brought to the encoding asked (see [Compression](#compression)) by `--download`,
+with their sidecars; products by `--daily` and `--consolidate-years`.
+
 **ERA5 pressure levels.** By default `temperature` at 850, 700 and 500 hPa, one request per
 variable, month and group of levels (cost limit 60 000). ERA5 gives values below the terrain,
 so `--daily` masks every hour before aggregating: a sample counts only where the surface
 pressure is finite and `100 × level_hPa ≤ sp_Pa`. The hourly surface pressure comes from
 `download_era5.py --variables sp` over the same box and period (`--surface-pressure` is its
 folder); without it no daily file is built. Each level is a separate 2-D surface; detection on
-levels is not part of these examples.
+levels is not part of these examples. Daily files are built by blocks, as for single levels.
 
 **GLORYS.** The script requests `thetao` over 12°S–4°S × 82°W–77°W and 0–500 m
 (`--max-depth`), one calendar year per request, dataset version `202311`. `--dry-run` asks the
@@ -197,11 +211,17 @@ service to check the request without transferring data; its size estimate overst
 transfer about twelve times. A year the service covers only in part is rejected unless
 `--allow-partial` keeps it as `thetao_<year>_partial.nc`. The tutorial then keeps every eighth
 horizontal cell and every second of the top 24 levels; see [Tutorials](TUTORIALS.md#glorys).
+A box crossing the antimeridian is joined slab by slab of days (bounded memory). The service
+sends uncompressed files; each validated year (or part) is then rewritten with the encoding
+asked.
 
 **OSTIA.** One request for the whole period (`--block-days` splits it), split locally into one
 file per year. `analysed_sst` is stored as `int16` (scale 0.01, offset 273.15) in **kelvin**, on
 a 0.05° grid, with timestamps at 00:00. The dataset version is pinned (`202003`); the end of the
 series is asked from the service, and a year it covers only in part needs `--allow-partial`.
+Each year is written month by month from the blocks, values as stored, so memory holds one
+month of the box. The blocks are deleted after splitting; with `--keep-blocks` they follow the
+encoding asked like the years.
 See the [product page](https://data.marine.copernicus.eu/product/SST_GLO_SST_L4_REP_OBSERVATIONS_010_011).
 
 **ESA SST CCI.** The archive has one global file per day; the script reads only the bytes of the
@@ -211,7 +231,25 @@ took 25 s with three processes in revision 6, so the full period is expected to 
 series ends on 2021-12-31; the interim series (ICDR) that continues it is used only with
 `--include-icdr`, and the manifest gives the series of each day. A reused day is checked against
 the server's ETag (`--no-check-etag` skips it). Timestamps are at 12:00, unlike OSTIA's 00:00, so
-align both to the calendar day before comparing. For 1991–2025 use OSTIA.
+align both to the calendar day before comparing. For 1991–2025 use OSTIA. The daily parts are
+combined 31 days at a time into one file (values as stored), so memory holds a
+month of the box instead of the whole period.
+
+### Compression
+
+Every downloader writes the NetCDF files it keeps (pieces and products) with zlib and byte
+shuffle, level 4 by default (`--compression-level 1-9`); `--no-compress` writes them
+uncompressed. On the short F3 downloads, level 4 left files at 32–68 % of their uncompressed
+size. Only the layout changes: no option quantises values (no new `int16` packing), and
+`content_sha256` is the same at any setting.
+
+The encoding is part of each product's identity in the ledger. A run with another setting
+rewrites in place, block by block, the files kept with the previous one: pieces first, then
+the products built from them, which are not rebuilt and need neither the pieces nor the network
+(OSTIA years whose blocks were deleted are rewritten alone). Each rewrite must give the
+recorded `content_sha256` before it replaces the file. Products written before the encoding
+was recorded are treated in the same way on the next run. OSTIA and GLORYS answers arrive
+uncompressed; the files kept from them are rewritten with the encoding asked.
 
 A fresh retrieval can differ in bytes from the registered file, because of
 container metadata or revised product values. Treat it as a new, unreviewed run,

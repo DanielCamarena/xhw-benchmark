@@ -610,3 +610,64 @@ def test_float32_service_coordinates_keep_the_seam_centres(tmp_path, policy):
     lon = joined_lon(next(tmp_path.iterdir()) / "analysed_sst_19910101_19910101.nc")
     assert np.sum(np.isclose(lon, d.LON_LAST, atol=1e-4)) == 1
     assert np.sum(np.isclose(lon, d.LON_FIRST, atol=1e-4)) == 1
+
+
+def test_year_written_month_by_month_equals_one_join(tmp_path):
+    # 2026-11-04: the year is written by months; it must be the file the previous build gave
+    # by joining every block of the year in memory (values, packing, attributes).
+    client = FakeClient()
+    box = ["--box", "0", "0.5", "179", "-179"]
+    args = [*box, "--start", "1991-01-01", "--end", "1991-12-31", "--block-days", "100"]
+    assert run(tmp_path, client, *args, "--download", "--keep-blocks") == 0
+    target = next(tmp_path.iterdir())
+    ledger = json.loads((target / "ledger.json").read_text())
+    periods: dict = {}
+    for piece in ledger["pieces"].values():
+        periods.setdefault(piece["request"]["start_datetime"], []).append(piece)
+    joined = []
+    for key in sorted(periods):
+        parts = []
+        for piece in sorted(periods[key], key=lambda p: p["request"]["minimum_longitude"] < 0):
+            with xr.open_dataset(
+                target / piece["piece"]["path"], engine="h5netcdf", **d.RAW
+            ) as raw:
+                parts.append(raw.load())
+        joined.append(
+            xr.concat(parts, dim="longitude", data_vars="minimal", coords="minimal",
+                      compat="override", combine_attrs="drop_conflicts")
+        )  # fmt: skip
+    legacy = xr.concat(joined, dim="time", data_vars="minimal", coords="minimal",
+                       compat="override", combine_attrs="drop_conflicts")  # fmt: skip
+    legacy.to_netcdf(tmp_path / "legacy.nc", engine="h5netcdf")
+    year = target / "analysed_sst_1991.nc"
+    assert content_sha256(year) == content_sha256(tmp_path / "legacy.nc")
+    with xr.open_dataset(year, engine="h5netcdf", **d.RAW) as got:
+        assert got.attrs == legacy.attrs
+        assert got.sizes["time"] == 365 and got[d.VARIABLE].dtype == legacy[d.VARIABLE].dtype
+        for name in legacy.variables:
+            assert repr(got[name].attrs) == repr(legacy[name].attrs), name  # NaN fill values
+    assert aq.file_encoding(year) == "zlib-4"
+
+
+def test_another_encoding_rewrites_years_without_their_blocks(tmp_path):
+    # The blocks are deleted after splitting: the year is rewritten in place, no download.
+    args = [*SMALL, "--start", "1991-01-01", "--end", "1991-12-31", "--download"]
+    client = FakeClient()
+    assert run(tmp_path, client, *args) == 0
+    year = folder(tmp_path) / "analysed_sst_1991.nc"
+    assert aq.file_encoding(year) == "zlib-4" and not list(folder(tmp_path).glob("blocks/*.nc"))
+    content = content_sha256(year)
+    assert run(tmp_path, None, *args, "--no-compress") == 0  # no client needed
+    assert aq.file_encoding(year) == "none" and content_sha256(year) == content
+    ledger = aq.Ledger(folder(tmp_path) / "ledger.json")
+    assert ledger.data["products"]["analysed_sst_1991.nc"]["sha256"] == aq.file_sha256(year)
+
+
+def test_kept_blocks_follow_the_encoding(tmp_path):
+    args = [*SMALL, "--start", "1991-01-01", "--end", "1991-03-31", "--download", "--keep-blocks"]
+    assert run(tmp_path, FakeClient(), *args, "--no-compress") == 0
+    (block,) = folder(tmp_path).glob("blocks/*.nc")
+    year = next(folder(tmp_path).glob("analysed_sst_*.nc"))
+    assert aq.file_encoding(block) == aq.file_encoding(year) == "none"
+    assert run(tmp_path, None, *args) == 0
+    assert aq.file_encoding(block) == aq.file_encoding(year) == "zlib-4"

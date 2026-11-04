@@ -28,6 +28,7 @@ pd = pytest.importorskip("pandas")
 xr = pytest.importorskip("xarray")
 pytest.importorskip("h5netcdf")
 
+import _acquire as aq  # noqa: E402
 import download_glorys as dg  # noqa: E402
 
 BOX = ["--box", "-5", "-4.5", "-80", "-79.5"]  # aligned with the 1/12 degree grid
@@ -123,7 +124,12 @@ class FakeClient(types.ModuleType):
         data = {name: (dims, values) for name in cfg["variables"]}
         if mode == "scalar":
             data = {name: ((), np.float32(15.0)) for name in cfg["variables"]}
-        packed = {"dtype": "int16", "scale_factor": 0.001, "add_offset": 15.0, "_FillValue": -32767}
+        packed = {
+            "dtype": "int16",
+            "scale_factor": 0.001,
+            "add_offset": 15.0,
+            "_FillValue": -32767,
+        }  # as the service sends them: packed, uncompressed (F3 files, 2026-11-04)
         xr.Dataset(
             data, coords={"time": t, "depth": depth, "latitude": lat, "longitude": lon}
         ).to_netcdf(out, engine="h5netcdf", encoding={name: packed for name in cfg["variables"]})
@@ -513,6 +519,13 @@ def test_crossing_box_is_joined_west_to_east(tmp_path, client, monkeypatch):
     expected = 15 + 0.01 * lon.astype(float)  # the fake writes values that follow longitude
     assert np.allclose(ds["thetao"].isel(time=-1, depth=0, latitude=0), expected, atol=2e-3)
     assert ds["thetao"].encoding["dtype"] == np.dtype("int16")  # copied packed
+    parts = folder(tmp_path) / "parts"  # parts and join follow --compress (default zlib 4)
+    joined_file = folder(tmp_path) / "thetao_19930101-19930131.nc"
+    assert (
+        aq.file_encoding(joined_file)
+        == aq.file_encoding(parts / "thetao_19930101-19930131_west.nc")
+        == "zlib-4"
+    )
     (manifest,) = manifests(tmp_path)
     assert manifest["box"]["ok"] and manifest["box"]["policy"] == "enclose"
     assert manifest["request"]["longitude_parts"] == [[150.0, 180.0], [-180.0, -150.0]]
@@ -703,3 +716,18 @@ def test_box_ending_past_the_last_node_gets_the_minus_180_node(tmp_path, client,
     assert manifest["box"]["ok"]
     (name,) = finals(tmp_path)
     assert joined(tmp_path, name)["longitude"].values[-1] == -180.0
+
+
+def test_another_encoding_rewrites_parts_and_join_without_downloading(tmp_path, client):
+    assert run(tmp_path, *JANUARY, "--no-compress", box=CROSS) == 0
+    files = sorted(folder(tmp_path).rglob("thetao_*.nc"))
+    assert len(files) == 3 and {aq.file_encoding(p) for p in files} == {"none"}
+    content = {p: aq.content_sha256(p) for p in files}
+    client.calls.clear()
+    assert run(tmp_path, *JANUARY, box=CROSS) == 0
+    assert client.calls == []
+    assert {aq.file_encoding(p) for p in files} == {"zlib-4"}
+    assert {p: aq.content_sha256(p) for p in files} == content
+    joined_file = folder(tmp_path) / "thetao_19930101-19930131.nc"
+    manifest = [m for m in manifests(tmp_path) if joined_file.name in m["files"]][-1]
+    assert manifest["files"][joined_file.name]["sha256"] == aq.file_sha256(joined_file)

@@ -25,7 +25,7 @@ sys.path.insert(0, str(EXAMPLES))
 
 import _acquire as aq  # noqa: E402
 import download_oisst as d  # noqa: E402
-from content_hash import registered  # noqa: E402
+from content_hash import content_sha256, registered  # noqa: E402
 
 LAT, LON = d.OISST_LAT, d.OISST_LON
 #: snapshot -> (last day, sst value, first preliminary day or None)
@@ -548,3 +548,24 @@ def test_free_boxes_get_a_stable_label():
     b = d.make_targets(boxes=[(-60, 30, 150, -30)])
     assert a == b and a[0].label.startswith("box_") and a[0].key is None
     assert [t.label for t in d.make_targets(["peru", "peru"])] == ["peru"]
+
+
+def test_another_encoding_rewrites_pieces_and_product_without_reading(tmp_path, capsys):
+    # --compress (zlib 4, the default) or --no-compress: same content, nothing read again.
+    opener = Opener()
+    result = run(tmp_path, "S1", "2000-01-01", "2000-12-31", opener=opener, compress=None)
+    path = result.products["peru"]["path"]
+    (piece,) = (tmp_path / "oisst_partial").rglob("*.nc")
+    assert aq.file_encoding(path) == aq.file_encoding(piece) == "none"
+    content = {p: content_sha256(p) for p in (path, piece)}
+    calls = opener.calls
+    capsys.readouterr()
+    result = run(tmp_path, "S1", "2000-01-01", "2000-12-31", opener=opener)
+    assert result.exit_code == 0 and opener.calls == calls
+    assert "1 pieces rewritten with zlib-4" in capsys.readouterr().out
+    assert result.products["peru"]["status"] == "reencoded"
+    assert aq.file_encoding(path) == aq.file_encoding(piece) == "zlib-4"
+    assert {p: content_sha256(p) for p in (path, piece)} == content
+    assert run(tmp_path, "S1", "2000-01-01", "2000-12-31", opener=opener).products["peru"][
+        "status"
+    ] == "current"

@@ -424,6 +424,15 @@ STATES = ("planned", "downloaded", "validated", "failed", "quarantined")
 LEDGER_SCHEMA = "xhw-benchmark-ledger-v1"
 
 
+#: Product statuses that need no rebuild: ``reencoded`` was rewritten in place by
+#: ``Ledger.refresh_product`` (same values, the encoding asked).
+UP_TO_DATE = ("current", "reencoded")
+
+
+def _without_encoding(inputs: Mapping[str, str]) -> dict:
+    return {k: v for k, v in inputs.items() if k != "encoding"}
+
+
 class Ledger:
     """Persistent state of every piece of a plan, saved atomically after each change.
 
@@ -436,6 +445,7 @@ class Ledger:
         self.path = Path(path)
         self.autosave = autosave
         self._lock = threading.RLock()
+        self._rewrite_lock = threading.Lock()  # one in-place rewrite at a time
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8"))
             if data.get("schema") != LEDGER_SCHEMA:
@@ -553,11 +563,16 @@ class Ledger:
                 path = self.resolve(stored)
                 if not path.exists():
                     reason = f"file missing: {stored}"
-                elif file_sha256(path) != record["sha256"]:
+                elif not self._same_file(path, record):
                     reason = f"sha256 changed: {stored}"
                 if reason:
                     break
             if reason is None:
+                if "files" in piece:  # the first file is also the piece's own record
+                    first = piece["files"][piece["path"]]
+                    if piece["sha256"] != first["sha256"]:
+                        piece.update({k: first[k] for k in ("sha256", "bytes") if k in first})
+                        self._changed()
                 return True
             entry.setdefault("reverted", []).append({"utc": utc_now(), "reason": reason})
             self.update(piece_id, "planned")
@@ -585,10 +600,13 @@ class Ledger:
         return record
 
     def product_status(self, name: str, path: str | Path, inputs: Mapping[str, str]) -> str:
-        """``current``, ``missing``, ``unrecorded``, ``changed`` or ``stale``.
+        """``current``, ``missing``, ``unrecorded``, ``changed``, ``stale`` or ``reencode``.
 
         ``stale`` means the product was built from another list of pieces, or from a piece
-        whose SHA-256 has changed since: it must be rebuilt.
+        whose SHA-256 has changed since: it must be rebuilt. ``reencode`` means it differs
+        from ``inputs`` only in their ``encoding`` key (a product recorded without one
+        included): ``refresh_product`` rewrites it in place. A piece SHA-256 recorded before
+        ``reencode_piece`` rewrote that file counts as its current one.
         """
         path = Path(path)
         record = self.data["products"].get(name)
@@ -596,11 +614,162 @@ class Ledger:
             return "missing"
         if record is None or self.resolve(record["path"]).resolve() != path.resolve():
             return "unrecorded"
-        if file_sha256(path) != record["sha256"]:
+        if not self._same_file(path, record):
             return "changed"
-        if record["inputs"] != dict(sorted(inputs.items())):
-            return "stale"
-        return "current"
+        recorded = self._current_inputs(record["inputs"])
+        wanted = self._current_inputs(inputs)
+        if recorded == wanted:
+            return "current"
+        if "encoding" in wanted and _without_encoding(recorded) == _without_encoding(wanted):
+            return "reencode"
+        return "stale"
+
+    def _same_file(self, path: Path, record: dict) -> bool:
+        """``path`` has the SHA-256 of ``record``, or one a verified re-encoding of that file
+        gave (also one announced but not confirmed: a run cut between the replacement of the
+        file and its record); the record is then brought up to date."""
+        sha = file_sha256(path)
+        old = record["sha256"]
+        if sha == old:
+            return True
+        with self._lock:
+            if self.data.get("reencoding", {}).get(self._rel(path)) == [old, sha]:
+                self._confirm(path, old, sha)  # the replacement had happened
+            elif self._canonical(old) != self._canonical(sha):
+                return False
+            record["sha256"] = sha
+            if "bytes" in record:
+                record["bytes"] = path.stat().st_size
+            self._changed()
+        return True
+
+    def _announce(self, path: Path, old: str, copy: Path) -> str:
+        """Announce (and save) that the verified re-encoding ``copy`` is about to replace
+        ``path``, of SHA-256 ``old``; only ``_confirm`` makes the two equivalent. Announcements
+        are kept per file, so files with the same bytes never share one."""
+        new = file_sha256(copy)
+        with self._lock:
+            self.data.setdefault("reencoding", {})[self._rel(path)] = [old, new]
+            self.save()
+        return new
+
+    def _confirm(self, path: Path, old: str, new: str) -> None:
+        """Record that ``path``, of SHA-256 ``old``, was replaced by its re-encoding ``new``
+        (same content, another layout)."""
+        with self._lock:
+            self.data.get("reencoding", {}).pop(self._rel(path), None)
+            pairs = self.data.setdefault("reencoded", [])
+            if [old, new] not in pairs:
+                pairs.append([old, new])
+            self._changed()
+
+    def _canonical(self, sha: str) -> str:
+        """One SHA-256 for every file a chain of re-encodings links to ``sha`` (the
+        smallest), whatever the order of the rewrites, cycles included."""
+        linked: dict[str, set] = {}
+        for a, b in self.data.get("reencoded", []):
+            linked.setdefault(a, set()).add(b)
+            linked.setdefault(b, set()).add(a)
+        seen, todo = {sha}, [sha]
+        while todo:
+            for other in linked.get(todo.pop(), ()):
+                if other not in seen:
+                    seen.add(other)
+                    todo.append(other)
+        return min(seen)
+
+    def _current_inputs(self, inputs: Mapping[str, str]) -> dict:
+        """Inputs with each SHA-256 of a file re-encoded by ``reencode_piece`` replaced by
+        the one shared by all its re-encodings (same content, other layout)."""
+        with self._lock:
+            return dict(sorted((k, self._canonical(v)) for k, v in inputs.items()))
+
+    def _reencode(self, path: Path, compress: int | None, record: dict) -> None:
+        """Rewrite ``path`` (recorded as ``record``) announcing and then confirming the new
+        SHA-256, so a cut at any point leaves an intact, recognisable file."""
+        old, new = record["sha256"], []
+        reencode_netcdf_atomic(
+            path, compress, expect=record.get("content_sha256"),
+            before_replace=lambda copy: new.append(self._announce(path, old, copy)),
+        )  # fmt: skip
+        self._confirm(path, old, new[0])
+
+    def reencode_piece(
+        self, piece_id: str, compress: int | None, rewritten: Callable[[Path], None] | None = None
+    ) -> bool:
+        """Rewrite the NetCDF files of a validated, intact piece stored with another encoding
+        than ``compress`` asks; True if any was rewritten.
+
+        Values do not change (``reencode_netcdf_atomic`` checks the recorded
+        ``content_sha256``). The piece is recorded again with its checks, and each old
+        SHA-256 is mapped to the new one (saved before the file is replaced, so a run cut
+        in between finds the piece intact), and products built from the piece differ from it
+        only in their own encoding (``product_status`` says ``reencode``), not ``stale``.
+        ``rewritten(path)`` runs after each file is rewritten (a sidecar to update); a run
+        cut before the piece was recorded again runs it for every file of the piece the next
+        time, even if nothing is left to rewrite.
+        """
+        with self._rewrite_lock:
+            if not self.reusable(piece_id):
+                return False
+            entry = self.get(piece_id)
+            piece = entry["piece"]
+            files = piece.get("files") or {piece["path"]: piece}
+            wanted = encoding_label(compress)
+            paths = {stored: self.resolve(stored) for stored in files}
+            other = [
+                s for s, p in paths.items() if p.suffix == ".nc" and file_encoding(p) != wanted
+            ]
+            unfinished = bool(entry.get("rewriting"))  # a run cut before the record below
+            if not other and not unfinished:
+                return False
+            self.update(piece_id, rewriting=True)
+            self.save()
+            for stored in other:
+                self._reencode(paths[stored], compress, files[stored])
+            if rewritten is not None:
+                for stored in other if not unfinished else paths:
+                    rewritten(paths[stored])
+            listed = list(paths.values())
+            one = listed if len(listed) > 1 else listed[0]
+            self.record_piece(piece_id, one, entry.get("checks"))
+            self.pieces[piece_id].pop("rewriting", None)
+            self._changed()
+            return True
+
+    def refresh_product(
+        self, name: str, path: str | Path, inputs: Mapping[str, str], compress: int | None
+    ) -> str:
+        """``product_status``, after rewriting in place a product that differs from
+        ``inputs`` only in its encoding (then ``reencoded``; see ``UP_TO_DATE``).
+
+        The rewrite keeps the values (``reencode_netcdf_atomic`` checks ``content_sha256``)
+        and goes block by block for a large file, so a product whose pieces are gone (OSTIA
+        blocks) never needs them again. The record gets the new SHA-256, size and inputs; a
+        manifest recorded with it, which names the old SHA-256, is dropped to be written
+        again.
+        """
+        with self._rewrite_lock:
+            status = self.product_status(name, path, inputs)
+            if status != "reencode":
+                return status
+            path = Path(path)
+            record = self.data["products"][name]
+            if file_encoding(path) != encoding_label(compress):
+                self._reencode(path, compress, record)
+            self._record_reencoded(record, path, inputs)
+        return "reencoded"
+
+    def _record_reencoded(self, record: dict, path: Path, inputs: Mapping[str, str]) -> None:
+        with self._lock:
+            record.update(
+                sha256=file_sha256(path), inputs=dict(sorted(inputs.items())),
+                reencoded_utc=utc_now(),
+            )  # fmt: skip
+            if "bytes" in record:
+                record["bytes"] = path.stat().st_size
+            record.pop("manifest", None)
+            self._changed()
 
     def statuses(self, ids: Sequence[str] | None = None) -> dict[str, str]:
         ids = list(self.pieces) if ids is None else ids
@@ -645,6 +814,369 @@ def write_netcdf_atomic(ds, path: str | Path, **kwargs) -> Path:
     with atomic_target(path) as tmp:
         ds.to_netcdf(tmp, **kwargs)
     return Path(path)
+
+
+#: Encoding keys that decide the stored values; everything else (compression, chunks,
+#: the source file) is physical layout and may change without changing ``content_sha256``.
+VALUE_ENCODING = ("dtype", "_FillValue", "missing_value", "scale_factor", "add_offset",
+                  "units", "calendar")  # fmt: skip
+
+
+#: zlib level of ``--compression-level`` when it is not given.
+DEFAULT_COMPRESSION = 4
+#: Bytes of time-dependent data per block when a large file is rewritten.
+REENCODE_BLOCK_BYTES = 256 * 2**20
+
+
+def compression_arguments(parser: argparse.ArgumentParser) -> None:
+    """``--compress/--no-compress`` and ``--compression-level``, the same in every script."""
+    parser.add_argument(
+        "--compress", action=argparse.BooleanOptionalAction, default=True,
+        help="zlib with byte shuffle for every NetCDF file this script keeps (pieces and "
+        "products; default); --no-compress writes them uncompressed. Only the layout "
+        "changes, never content_sha256: files kept with another setting are rewritten on "
+        "the next run, without downloading again",
+    )  # fmt: skip
+    parser.add_argument(
+        "--compression-level", type=int, default=DEFAULT_COMPRESSION, choices=range(1, 10),
+        metavar="1-9", help=f"zlib level with --compress (default {DEFAULT_COMPRESSION})",
+    )  # fmt: skip
+
+
+def compression(args: argparse.Namespace) -> int | None:
+    """The zlib level the arguments ask for, or None for uncompressed files."""
+    return args.compression_level if args.compress else None
+
+
+def encoding_label(compress: int | None) -> str:
+    """``zlib-<level>`` (zlib with byte shuffle) or ``none``: the encoding a run asks for."""
+    return f"zlib-{compress}" if compress else "none"
+
+
+def zlib_encoding(names, compress: int | None) -> dict | None:
+    """``to_netcdf`` encoding: zlib at level ``compress`` with byte shuffle for ``names``."""
+    if not compress:
+        return None
+    return {n: {"zlib": True, "complevel": compress, "shuffle": True} for n in names}
+
+
+def compressed(name: str, var, dims, compress: int | None) -> bool:
+    """Whether ``compress`` applies to a variable: never to scalars or dimension coordinates."""
+    return bool(compress) and bool(var.ndim) and name not in dims
+
+
+def with_layout(ds, compress: int | None):
+    """``ds`` (shallow copy) whose variables are written with zlib ``compress`` and byte
+    shuffle, or uncompressed: the encodings that decide the stored values (dtype, packing,
+    fill value, time units) are kept; layout inherited from a source file (its compression,
+    chunks) is dropped."""
+    out = ds.copy(deep=False)
+    for name, var in out.variables.items():
+        encoding = {k: v for k, v in var.encoding.items() if k in VALUE_ENCODING}
+        if compressed(name, var, out.dims, compress):
+            encoding.update(zlib=True, complevel=compress, shuffle=True)
+        var.encoding = encoding
+    return out
+
+
+def file_encoding(path: str | Path) -> str:
+    """The compression of the non-scalar variables of a NetCDF file other than dimension
+    coordinates, as ``encoding_label`` names it (``mixed`` if they differ). zlib without
+    byte shuffle is ``zlib-<level>-noshuffle``; other compression is reported as is."""
+    import h5netcdf
+
+    labels = set()
+    with h5netcdf.File(path, "r") as f:
+        for name, var in f.variables.items():
+            if name in f.dimensions or not var.shape:  # scalars are never compressed
+                continue
+            if var.compression is None:
+                labels.add("none")
+            elif var.compression == "gzip":
+                label = encoding_label(var.compression_opts)
+                labels.add(label if var.shuffle else f"{label}-noshuffle")
+            else:
+                labels.add(str(var.compression))
+    return labels.pop() if len(labels) == 1 else "mixed"
+
+
+def reencode_netcdf_atomic(
+    path: str | Path, compress: int | None, *, expect: str | None = None,
+    block_bytes: int = REENCODE_BLOCK_BYTES, before_replace: Callable[[Path], None] | None = None,
+) -> Path:  # fmt: skip
+    """Rewrite a NetCDF file with another compression, keeping every stored value.
+
+    Only the physical layout changes: the values are copied as stored, without CF decoding,
+    with their attributes (packing, fill value, time units). A file whose time-dependent
+    variables exceed ``block_bytes`` is copied block by block along ``time`` or
+    ``valid_time`` (``BlockWriter``), so memory holds one block. The copy must have the
+    ``content_sha256`` of the file (or ``expect``) before it replaces it; otherwise the file
+    is left as it was and ``ValueError`` is raised. ``before_replace(copy)`` runs once the
+    copy is verified, before it replaces the file (to record its SHA-256 first).
+    """
+    import xarray as xr
+
+    path = Path(path)
+    expect = expect or content_sha256(path)
+    copy = path.with_name(f"{path.name}.{uuid.uuid4().hex[:8]}.reencode.tmp")
+    with xr.open_dataset(path, engine="h5netcdf", decode_cf=False) as opened:
+        dim = next((d for d in ("time", "valid_time") if d in opened.dims), None)
+        timed = [v for v in opened.variables.values() if dim and dim in v.dims]
+        size = sum(v.nbytes for v in timed)
+        if dim is None or size <= block_bytes:
+            ds = opened.load()
+            encoding = {}
+            for name, var in ds.variables.items():
+                one = {}
+                if compressed(name, var, ds.dims, compress):
+                    one = {"zlib": True, "complevel": compress, "shuffle": True}
+                if "_FillValue" not in var.attrs:
+                    one["_FillValue"] = None  # no fill value where the file had none
+                encoding[name] = one
+                var.encoding = {}
+            write_netcdf_atomic(ds, copy, encoding=encoding)
+        else:
+            steps = max(1, block_bytes // max(1, size // opened.sizes[dim]))
+            with BlockWriter(copy, dim, compress, raw=True, keep_fill=True) as writer:
+                for start in range(0, opened.sizes[dim], steps):
+                    writer.append(opened.isel({dim: slice(start, start + steps)}).load())
+                writer.commit()
+    try:
+        if content_sha256(copy) != expect:
+            raise ValueError(f"{path.name}: rewriting it would change its content; kept as is")
+        if before_replace is not None:
+            before_replace(copy)
+        os.replace(copy, path)
+    finally:
+        copy.unlink(missing_ok=True)
+    return path
+
+
+def _equivalent(a, b) -> bool:
+    try:
+        return bool(np.array_equal(np.asarray(a), np.asarray(b), equal_nan=True))
+    except TypeError:  # strings and other non-numeric values
+        return bool(np.array_equal(np.asarray(a), np.asarray(b)))
+
+
+def merge_attrs(dicts: Sequence[Mapping]) -> dict:
+    """Attributes of several datasets as ``xr.concat(..., combine_attrs="drop_conflicts")``
+    keeps them: every key, except those whose values differ between datasets.
+
+    For files joined block by block, where the concatenation never sees all of them at once.
+    """
+    merged: dict = {}
+    dropped: set = set()
+    for attrs in dicts:
+        for key, value in attrs.items():
+            if key in dropped:
+                continue
+            if key not in merged:
+                merged[key] = value
+            elif not _equivalent(merged[key], value):
+                del merged[key]
+                dropped.add(key)
+    return merged
+
+
+class BlockWriter:
+    """A NetCDF file written block by block along ``dim``: one block in memory at a time.
+
+    The first write goes through xarray (attributes, encodings and the variables without
+    ``dim``, such as a land-sea mask). Later blocks are encoded with the encodings that
+    write stored and appended in place with h5netcdf. The first write is held until it has
+    at least two steps, so xarray chooses the same time units as for the whole series: the
+    file has the same ``content_sha256`` as one ``to_netcdf`` of the concatenated blocks
+    (``dim`` is stored as unlimited, which that hash ignores). Blocks must follow each
+    other along ``dim`` and hold the same variables.
+
+    With ``raw=True`` the blocks hold values as stored, opened without CF decoding (packed
+    integers, numeric times with their ``units``): later blocks are copied as they are, and
+    their dtype and decoding attributes must be those of the first block. ``compress`` is
+    zlib with byte shuffle (``with_layout``). ``keep_fill`` (raw only) writes no fill value
+    where a variable has none, as a copy of a file must; otherwise xarray's default applies.
+
+    The file appears at ``path`` only on ``commit()``; leaving the ``with`` block without
+    it, or on an error, removes the temporary file.
+    """
+
+    def __init__(
+        self, path: str | Path, dim: str = "time", compress: int | None = None, *,
+        raw: bool = False, keep_fill: bool = False,
+    ):  # fmt: skip
+        self.path, self.dim, self.compress = Path(path), dim, compress
+        self.raw, self.keep_fill = raw, keep_fill
+        self.stored: dict[str, tuple] = {}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.tmp = self.path.with_name(f"{self.path.name}.{uuid.uuid4().hex[:8]}.tmp")
+        self.pending = None
+        self.encodings: dict[str, dict] | None = None
+        self.names: set[str] = set()
+        self.last = None
+        self.steps = 0
+        self.attrs: dict = {}
+        self.fixed: dict = {}
+        self.sizes: dict = {}
+
+    def __enter__(self) -> BlockWriter:
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.tmp.unlink(missing_ok=True)  # committed files were moved away already
+
+    def _timed(self, ds) -> set[str]:
+        return {k for k, v in ds.variables.items() if self.dim in v.dims}
+
+    def _check_fixed(self, ds, fixed: Mapping) -> None:
+        """The other dimensions keep their sizes, and variables without ``dim`` (latitude,
+        longitude, levels, a mask) must be those of the first block: later blocks are
+        written by position. Those variables may be omitted."""
+        sizes = {d: n for d, n in ds.sizes.items() if d != self.dim}
+        if sizes != self.sizes:
+            raise ValueError(f"{self.path.name}: a block has sizes {sizes}, the file {self.sizes}")
+        for name, var in ds.variables.items():
+            if self.dim in var.dims:
+                continue
+            if name not in fixed:
+                raise ValueError(f"{self.path.name}: {name} is not in the first block")
+            ref = fixed[name]
+            values = np.asarray(var.values)
+            same = values.shape == ref.shape and (
+                np.array_equal(values, ref, equal_nan=True)
+                if values.dtype.kind in "fc"
+                else np.array_equal(values, ref)
+            )
+            if not same:
+                raise ValueError(f"{self.path.name}: {name} differs from the first block")
+
+    def append(self, ds) -> None:
+        import xarray as xr
+
+        values = ds[self.dim].values
+        if values.size == 0:
+            return
+        if self.last is not None and not values[0] > self.last:
+            raise ValueError(f"{self.path.name}: block at {values[0]} does not follow {self.last}")
+        if values.size > 1 and not (values[1:] > values[:-1]).all():
+            raise ValueError(f"{self.path.name}: {self.dim} is not increasing within a block")
+        self.last = values[-1]
+        self.steps += values.size
+        if self.encodings is not None:
+            self._append(ds)
+            return
+        if self.pending is None:
+            self.pending = ds
+            self.sizes = {d: n for d, n in ds.sizes.items() if d != self.dim}
+        else:  # concatenate the variables along dim; the others come from the first block
+            first = self.pending
+            if self._timed(ds) != self._timed(first):
+                raise ValueError(
+                    f"{self.path.name}: a block holds {sorted(self._timed(ds))}, the first "
+                    f"{sorted(self._timed(first))}"
+                )
+            self._check_fixed(ds, self._fixed(first))
+            for k in self._timed(ds) if self.raw else ():
+                if self._stored(ds.variables[k]) != self._stored(first.variables[k]):
+                    raise ValueError(f"{self.path.name}: {k} of a block is stored differently")
+            static = [k for k in first.data_vars if self.dim not in first[k].dims]
+            joined = xr.concat(
+                [first.drop_vars(static), ds.drop_vars([k for k in static if k in ds])],
+                dim=self.dim, combine_attrs="override", join="exact",
+            )  # fmt: skip
+            self.pending = joined.assign({k: first[k] for k in static})
+        if self.pending.sizes[self.dim] >= 2:
+            self._write_first()
+
+    def _write_first(self) -> None:
+        import xarray as xr
+
+        # values keep their encoding (dtype, packing, fill); the layout inherited from the
+        # files the block was read from does not travel: only ``compress`` decides it
+        ds, self.pending = with_layout(self.pending, self.compress), None
+        if self.raw and self.keep_fill:
+            for var in ds.variables.values():
+                if "_FillValue" not in var.attrs:
+                    var.encoding["_FillValue"] = None
+        ds.to_netcdf(self.tmp, engine="h5netcdf", unlimited_dims=[self.dim])
+        with xr.open_dataset(self.tmp, engine="h5netcdf") as written:
+            self.encodings = {
+                k: {e: v for e, v in written[k].encoding.items() if e in VALUE_ENCODING}
+                for k in written.variables
+            }
+        self.names = self._timed(ds)
+        self.fixed = self._fixed(ds)
+        self.stored = {k: self._stored(ds.variables[k]) for k in self.names}
+
+    @staticmethod
+    def _stored(var) -> tuple:
+        """dtype and decoding attributes of a raw variable (what its stored values mean)."""
+        keys = ("scale_factor", "add_offset", "_FillValue", "missing_value", "units", "calendar")
+        return (str(var.dtype), *(repr(var.attrs.get(k)) for k in keys))
+
+    def _fixed(self, ds) -> dict:
+        return {k: np.asarray(v.values) for k, v in ds.variables.items() if self.dim not in v.dims}
+
+    def _append(self, ds) -> None:
+        import h5netcdf
+        import xarray as xr
+
+        if self._timed(ds) != self.names:
+            raise ValueError(
+                f"{self.path.name}: a block holds {sorted(self._timed(ds))}, the file "
+                f"{sorted(self.names)}"
+            )
+        self._check_fixed(ds, self.fixed)
+        with h5netcdf.File(self.tmp, "a") as f:
+            start = f.dimensions[self.dim].size
+            stop = start + ds.sizes[self.dim]
+            f.resize_dimension(self.dim, stop)
+            for name in sorted(self.names):
+                var = ds.variables[name].copy(deep=False)
+                target = f.variables[name]
+                if self.raw:  # copied as stored: it must mean what the first block meant
+                    if self._stored(var) != self.stored[name]:
+                        raise ValueError(
+                            f"{self.path.name}: {name} of a block is stored differently "
+                            f"({self._stored(var)} != {self.stored[name]})"
+                        )
+                    encoded = var
+                else:
+                    var.encoding = dict(self.encodings[name])
+                    encoded = xr.conventions.encode_cf_variable(var, name=name)
+                if var.dtype.kind == "M":  # the stored time units must still hold the values
+                    attrs = target.attrs
+                    back = xr.coding.times.decode_cf_datetime(
+                        np.asarray(encoded.values), attrs["units"], attrs.get("calendar")
+                    )
+                    if not np.array_equal(np.asarray(back, dtype=var.dtype), var.values):
+                        raise ValueError(
+                            f"{self.path.name}: {name} of a block cannot be stored in "
+                            f"{attrs['units']!r}"
+                        )
+                if tuple(target.dimensions) != tuple(encoded.dims):
+                    raise ValueError(f"{name}: dimensions {encoded.dims}, file {target.dimensions}")
+                index = tuple(
+                    slice(start, stop) if d == self.dim else slice(None) for d in encoded.dims
+                )
+                target[index] = np.asarray(encoded.values)
+
+    def update_attrs(self, attrs: Mapping) -> None:
+        """Global attributes to set at ``commit`` (for values known only after the blocks)."""
+        self.attrs.update(attrs)
+
+    def commit(self) -> Path:
+        if self.pending is not None:  # fewer than two steps in all: one ordinary write
+            self._write_first()
+        if self.encodings is None:
+            raise ValueError(f"{self.path.name}: no block to write")
+        if self.attrs:
+            import h5netcdf
+
+            with h5netcdf.File(self.tmp, "a") as f:
+                for key, value in self.attrs.items():
+                    f.attrs[key] = value
+        os.replace(self.tmp, self.path)
+        return self.path
 
 
 def sidecar_path(path: str | Path) -> Path:

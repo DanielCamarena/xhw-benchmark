@@ -24,6 +24,7 @@ sys.path.insert(0, str(EXAMPLES))
 import _acquire as aq  # noqa: E402
 import download_era5 as single  # noqa: E402
 import download_era5_pressure as pl  # noqa: E402
+from content_hash import content_sha256  # noqa: E402
 
 SMALL = ["--box", "-12.9", "-12.1", "-82.1", "-81.4"]  # 5 x 5 nodes after rounding outward
 UNITS = {"t": "K", "z": "m**2 s**-2", "u": "m s**-1", "v": "m s**-1", "sp": "Pa", "lsm": "1"}
@@ -380,3 +381,25 @@ def test_crossing_box_with_surface_pressure_in_two_parts(tmp_path):
     with daily_file(tmp_path) as ds:
         assert ds["longitude"].values.tolist() == [179.5, 179.75, 180.0, -179.75, -179.5]
         assert bool(ds["t_mean"].sel(pressure_level=500.0).notnull().all())
+
+
+def test_daily_blocks_and_compression_do_not_change_the_product(tmp_path, capsys):
+    # External review 2026-11-04: month blocks (default) and year blocks give the same
+    # values across a month end; another encoding rewrites the product with the same content.
+    period, sp_folder = download_both(tmp_path, "2023-02-27", "2023-03-02")
+    argv = [*SMALL, *period, "--daily", "--surface-pressure", str(sp_folder), "--derived", "theta"]
+    assert run(tmp_path, [*argv, "--daily-block", "year"])[0] == 0
+    (path,) = tmp_path.glob("era5p_*_daily_t_*.nc")
+    content = content_sha256(path)
+    path.rename(tmp_path / "year.nc")
+    ledger = aq.Ledger(next((tmp_path / "era5_pressure").iterdir()) / "ledger.json")
+    ledger.data["products"] = {}
+    ledger.save()
+    assert run(tmp_path, argv)[0] == 0
+    assert content_sha256(path) == content and aq.file_encoding(path) == "zlib-4"
+    capsys.readouterr()
+    assert run(tmp_path, [*argv, "--no-compress"])[0] == 0
+    assert ": reencoded" in capsys.readouterr().out
+    assert content_sha256(path) == content and aq.file_encoding(path) == "none"
+    with xr.open_dataset(path, engine="h5netcdf") as ds:
+        assert ds.sizes["time"] == 4 and ds.attrs["era5_expver_status"] == "final"

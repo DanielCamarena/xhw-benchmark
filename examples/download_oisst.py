@@ -50,9 +50,11 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 from _acquire import (
+    DEFAULT_COMPRESSION,
     POLICIES,
     REGIONS,
     AcquireError,
+    BlockWriter,
     Box,
     CoverageError,
     Ledger,
@@ -63,12 +65,16 @@ from _acquire import (
     call_with_retries,
     check_coverage,
     classify_error,
+    compression,
+    compression_arguments,
     discard_damaged,
+    encoding_label,
     matches_registered,
     request_id,
     select_indices,
     select_lon_indices,
     utc_now,
+    with_layout,
     write_manifest,
     write_netcdf_atomic,
 )
@@ -483,66 +489,92 @@ def _verify_written(path: Path, data: xr.Dataset) -> None:
                 raise ValidationError(f"{path.name}: {name} differs from the data read")
 
 
-def write_piece(data: xr.Dataset, piece: Piece) -> None:
+def write_piece(data: xr.Dataset, piece: Piece, compress: int | None = DEFAULT_COMPRESSION) -> None:
     data = data.copy()
     data.attrs = {**data.attrs, "store": STORE, "store_snapshot": piece.request["snapshot"]}
-    write_netcdf_atomic(data, piece.path)
+    write_netcdf_atomic(with_layout(data, compress), piece.path)
     _verify_written(piece.path, data)
 
 
 # --- Join and manifest ------------------------------------------------------------------
 
 
-def join_pieces(
-    ledger: Ledger, pieces: Sequence[Piece], snapshot: str, policy: str, retrieved: str
-) -> tuple[xr.Dataset, dict]:
-    """Join the pieces of one box (one snapshot only), shift longitudes and add attributes.
-
-    Loads the whole series in memory, decoded as float64 (Peru ~65 MB, Nino 3.4 ~0.8 GB,
-    North Pacific ~3.4 GB for 1991-2025); a lazy join is left for phase F3 (E2).
-    """
-    parts = []
-    for piece in pieces:
-        path = ledger.resolve(ledger.get(piece.id)["piece"]["path"])
-        with xr.open_dataset(path, engine="h5netcdf") as opened:
-            if opened.attrs.get("store_snapshot") != snapshot:
-                raise ValidationError(
-                    f"{path.name} comes from snapshot {opened.attrs.get('store_snapshot')}, "
-                    f"not {snapshot}"
-                )
-            parts.append(opened.load())
-    series = xr.concat(parts, dim="time")
-    days = _days(series)
-    if days.size > 1 and np.any(np.diff(days) != np.timedelta64(1, "D")):
-        raise ValidationError("joined pieces are not one continuous daily series")
-    shift, convention = output_longitudes(series["lon"].values)
+def _shift_lon(ds: xr.Dataset, shift: np.ndarray) -> xr.Dataset:
     if np.all(shift == shift[0]):
-        series = series.assign_coords(lon=series["lon"] + float(shift[0]))
-    else:
-        values = (series["lon"].values + shift).astype(series["lon"].dtype)
-        series = series.assign_coords(lon=series["lon"].copy(data=values))
-    target = pieces[0].target
-    # content_sha256 hashes ``units``: keep the spelling of the registered inputs.
-    series["sst"].attrs = {**series["sst"].attrs, "units": "degC"}
-    noaa = dict(parts[0].attrs)
-    original_source = noaa.get("source")
-    box = target.box
-    entry = (
-        f"{retrieved} download_oisst.py: sst of {STORE}#{GROUP} snapshot {snapshot}, "
-        f"box S={box.south} N={box.north} W={box.west} E={box.east} ({policy}), "
-        f"{days[0]}..{days[-1]}, longitudes {convention}"
-    )
-    series.attrs = {
-        **noaa,
-        "source": SOURCE
-        if not original_source or original_source == SOURCE
-        else f"{SOURCE}; input sources: {original_source}",
-        "store": STORE,
-        "store_snapshot": snapshot,
-        "history": f"{noaa['history']}\n{entry}" if noaa.get("history") else entry,
-    }
-    lon_shift = float(shift[0]) if np.all(shift == shift[0]) else None
-    return series, {"lon_convention": convention, "lon_shift_applied": lon_shift}
+        return ds.assign_coords(lon=ds["lon"] + float(shift[0]))
+    values = (ds["lon"].values + shift).astype(ds["lon"].dtype)
+    return ds.assign_coords(lon=ds["lon"].copy(data=values))
+
+
+def write_joined(
+    ledger: Ledger,
+    pieces: Sequence[Piece],
+    snapshot: str,
+    policy: str,
+    retrieved: str,
+    path: Path,
+    compress: int | None = DEFAULT_COMPRESSION,
+) -> dict:
+    """Join the pieces of one box (one snapshot only) into ``path``, shift longitudes and
+    add attributes.
+
+    The pieces are written one at a time (``BlockWriter``), so memory holds one piece (one
+    year, decoded as float64: North Pacific ~100 MB), not the whole series. The file has the
+    ``content_sha256`` of one ``to_netcdf`` of the concatenated pieces; its attributes are
+    those of the first piece, as that concatenation kept them. ``compress`` is zlib with byte
+    shuffle (or None).
+    """
+    box = pieces[0].target.box
+    first_day = last_day = None
+
+    with BlockWriter(path, compress=compress) as writer:
+        for piece in pieces:
+            piece_path = ledger.resolve(ledger.get(piece.id)["piece"]["path"])
+            with xr.open_dataset(piece_path, engine="h5netcdf") as opened:
+                if opened.attrs.get("store_snapshot") != snapshot:
+                    raise ValidationError(
+                        f"{piece_path.name} comes from snapshot "
+                        f"{opened.attrs.get('store_snapshot')}, not {snapshot}"
+                    )
+                part = opened.load()
+            days = _days(part)
+            steps = np.diff(days if last_day is None else np.concatenate([[last_day], days]))
+            if days.size and np.any(steps != np.timedelta64(1, "D")):
+                raise ValidationError("joined pieces are not one continuous daily series")
+            if days.size:
+                first_day = days[0] if first_day is None else first_day
+                last_day = days[-1]
+            if piece is pieces[0]:  # the other pieces share its grid (BlockWriter checks it)
+                shift, convention = output_longitudes(part["lon"].values)
+                lon_shift = float(shift[0]) if np.all(shift == shift[0]) else None
+                lon_info = {"lon_convention": convention, "lon_shift_applied": lon_shift}
+                noaa = dict(part.attrs)
+            part = _shift_lon(part, shift)
+            if piece is pieces[0]:
+                lat, lon = part["lat"].values, part["lon"].values
+                check_coverage(
+                    box, lat, lon, policy, lat_step=grid_step(lat), lon_step=grid_step(lon)
+                )
+            # content_sha256 hashes ``units``: keep the spelling of the registered inputs.
+            part["sst"].attrs = {**part["sst"].attrs, "units": "degC"}
+            writer.append(part)
+        original_source = noaa.get("source")
+        entry = (
+            f"{retrieved} download_oisst.py: sst of {STORE}#{GROUP} snapshot {snapshot}, "
+            f"box S={box.south} N={box.north} W={box.west} E={box.east} ({policy}), "
+            f"{first_day}..{last_day}, longitudes {convention}"
+        )
+        history = f"{noaa['history']}\n{entry}" if noaa.get("history") else entry
+        source = (
+            SOURCE
+            if not original_source or original_source == SOURCE
+            else f"{SOURCE}; input sources: {original_source}"
+        )
+        writer.update_attrs(
+            {"source": source, "store": STORE, "store_snapshot": snapshot, "history": history}
+        )
+        writer.commit()
+    return lon_info
 
 
 def _fingerprint() -> dict | None:
@@ -631,13 +663,19 @@ def finish_product(
     policy: str,
     start: date,
     end: date,
+    compress: int | None = DEFAULT_COMPRESSION,
 ) -> dict:
-    """Build the product of one box if needed and make sure it has a manifest (R6)."""
+    """Build the product of one box if needed and make sure it has a manifest (R6).
+
+    The encoding (``compress``) is part of the product's identity: a product that differs
+    only in it is rewritten in place (``Ledger.refresh_product``), with a new manifest.
+    """
     target = pieces[0].target
     path = data_dir / product_name(target, start, end, policy)
     name = path.name
     inputs = {p.id: ledger.get(p.id)["piece"]["sha256"] for p in pieces}
-    status = ledger.product_status(name, path, inputs)
+    inputs["encoding"] = encoding_label(compress)
+    status = ledger.refresh_product(name, path, inputs, compress)
     if status in ("changed", "stale", "unrecorded"):
         why = {
             "changed": "its SHA-256 differs from the one recorded in the ledger",
@@ -649,12 +687,7 @@ def finish_product(
         for piece in pieces:
             if not ledger.reusable(piece.id):
                 raise AcquireError(f"{piece.id}: its file is missing or changed; run again")
-        series, lon_info = join_pieces(ledger, pieces, snapshot, policy, utc_now())
-        lat, lon = series["lat"].values, series["lon"].values
-        check_coverage(
-            target.box, lat, lon, policy, lat_step=grid_step(lat), lon_step=grid_step(lon)
-        )
-        write_netcdf_atomic(series, path)
+        lon_info = write_joined(ledger, pieces, snapshot, policy, utc_now(), path, compress)
         ledger.record_product(name, path, inputs, snapshot=snapshot, **lon_info)
     record = ledger.data["products"][name]
     manifest = record.get("manifest")
@@ -667,7 +700,8 @@ def finish_product(
         print(f"{name}: written, manifest {manifest_path.name}")
     else:
         print(f"{name}: up to date (manifest {Path(manifest).name})")
-    return {**record, "status": "built" if status == "missing" else "current", "path": path}
+    done = {"missing": "built", "reencoded": "reencoded"}.get(status, "current")
+    return {**record, "status": done, "path": path}
 
 
 # --- Run --------------------------------------------------------------------------------
@@ -695,11 +729,13 @@ def download(
     concurrency: int | None = 8,
     retry: Retry | None = None,
     opener: Callable[[str], xr.Dataset] | None = None,
+    compress: int | None = DEFAULT_COMPRESSION,
 ) -> RunResult:
     """Download, validate and join every piece; never raises for a failed piece or product.
 
     ``concurrency`` sets zarr's ``async.concurrency`` (None leaves it). ``opener`` replaces
-    ``open_daily`` (tests).
+    ``open_daily`` (tests). ``compress`` (zlib level with byte shuffle, or None) applies to
+    pieces and products; validated pieces kept with another encoding are rewritten in place.
     """
     retry = retry or Retry()
     data_dir = Path(data_dir)
@@ -709,10 +745,13 @@ def download(
     for piece in pieces:
         ledger.plan(piece.id, piece.request, piece.path)
     pending = [p for p in pieces if not ledger.reusable(p.id)]
+    rewritten = [p.id for p in pieces if p not in pending and ledger.reencode_piece(p.id, compress)]
+    if rewritten:
+        print(f"{len(rewritten)} pieces rewritten with {encoding_label(compress)}")
     problems: list[str] = []
     if pending:
         problems = _read_pending(
-            ledger, pending, snapshot, policy, keep_failed, concurrency, retry, opener
+            ledger, pending, snapshot, policy, keep_failed, concurrency, retry, opener, compress
         )
     ids = [p.id for p in pieces]
     summary = RunSummary.from_ledger(ledger, ids)
@@ -724,7 +763,7 @@ def download(
             continue
         try:
             products[target.label] = finish_product(
-                ledger, own, data_dir, snapshot, policy, start, end
+                ledger, own, data_dir, snapshot, policy, start, end, compress
             )
         except Exception as exc:
             problems.append(f"{target.label}: {_error(exc)}")
@@ -743,6 +782,7 @@ def _read_pending(
     concurrency: int | None,
     retry: Retry,
     opener,
+    compress: int | None = DEFAULT_COMPRESSION,
 ) -> list[str]:
     """Plan checks, then read year by year; stops at the first failed year."""
     if concurrency is not None:
@@ -787,8 +827,9 @@ def _read_pending(
         for piece in group:
             ledger.update(piece.id, "downloaded")
             stop += _publish(
-                ledger, piece, data[piece.id], policy, keep_failed, store, retry, selections
-            )
+                ledger, piece, data[piece.id], policy, keep_failed, store, retry, selections,
+                compress,
+            )  # fmt: skip
         print(f"{group[0].start.year}: {time.time() - t0:.0f} s")
         if stop:
             return stop
@@ -804,6 +845,7 @@ def _publish(
     store: Store,
     retry: Retry,
     selections: dict[str, Selection],
+    compress: int | None = DEFAULT_COMPRESSION,
 ) -> list[str]:
     """Validate and write one piece; a local write fault re-reads the piece once."""
     for attempt in (1, 2):
@@ -820,7 +862,7 @@ def _publish(
                 ledger.update(piece.id, "failed", error=_error(exc))
             return [_error(exc)]
         try:
-            write_piece(data, piece)
+            write_piece(data, piece, compress)
         except Exception as exc:
             discard_damaged(ledger, piece.id, piece.path, exc)
             if attempt == 2:
@@ -893,6 +935,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="save a piece that fails validation to quarantine instead of discarding it",
     )
+    compression_arguments(parser)
     return parser
 
 
@@ -952,6 +995,7 @@ def main(argv: Sequence[str] | None = None, opener=None) -> int:
         concurrency=args.concurrency if opener is None else None,
         retry=Retry(retries=args.retries),
         opener=opener,
+        compress=compression(args),
     )
     for label, product in result.products.items():
         verdict = product.get("matches_registered")

@@ -47,6 +47,7 @@ are not part of this example.
 from __future__ import annotations
 
 import argparse
+import calendar
 import json
 import re
 import sys
@@ -557,14 +558,38 @@ def write_outputs(ds, request: Request, root: Path, compress: int | None, checks
             "era5_expver_status": checks["expver_status"],
             "era5_expver_values": " ".join(checks["expver_values"]) or "absent",
         }
-        encoding = {var: {"zlib": True, "complevel": compress}} if compress else None
-        aq.write_netcdf_atomic(one, path, encoding=encoding)
-        aq.write_sidecar(
-            path, request.body, dataset=DATASET, request_id=request.id,
-            expver_status=checks["expver_status"], catalogue=CATALOGUE_VERSION,
-        )  # fmt: skip
+        aq.write_netcdf_atomic(aq.with_layout(one, compress), path)
+        _sidecar(path, request, checks)
         paths.append(path)
     return paths
+
+
+def _sidecar(path: Path, request: Request, checks: dict) -> None:
+    aq.write_sidecar(
+        path, request.body, dataset=DATASET, request_id=request.id,
+        expver_status=checks["expver_status"], catalogue=CATALOGUE_VERSION,
+    )  # fmt: skip
+
+
+def reencode_pieces(store: Store, requests, compress: int | None) -> list[str]:
+    """Rewrite the files of validated pieces stored with another encoding than asked
+    (``--compress``, the default, or ``--no-compress``).
+
+    The values do not change (same ``content_sha256``, checked); the sidecars and the ledger
+    get the new SHA-256, and products built from these pieces are rewritten in place by the
+    next ``--daily`` (``Ledger.refresh_product``). Nothing is downloaded again. Returns the
+    ids of the pieces rewritten.
+    """
+    done = []
+    for request in requests:
+        checks = (store.ledger.get(request.id) or {}).get("checks")
+
+        def sidecar(path: Path, request=request, checks=checks) -> None:
+            _sidecar(path, request, checks)
+
+        if store.ledger.reencode_piece(request.id, compress, sidecar):
+            done.append(request.id)
+    return done
 
 
 # --- Download ----------------------------------------------------------------------------
@@ -681,7 +706,10 @@ def expver_attrs(store: Store, ids) -> dict:
 
 
 def hourly(store: Store, requests: list[Request], var: str, first: datetime, last: datetime):
-    """Hourly ``var`` from ``first`` to ``last`` (UTC), read from the files of the plan only."""
+    """Hourly ``var`` from ``first`` to ``last`` (UTC), read from the files of the plan only.
+
+    Only the hours of the window are read from each file, so memory holds the window.
+    """
     import numpy as np
     import xarray as xr
 
@@ -696,7 +724,8 @@ def hourly(store: Store, requests: list[Request], var: str, first: datetime, las
             span_b = datetime.combine(b, datetime.min.time()) + timedelta(hours=request.hours[-1])
             if span_b >= first and span_a <= last:
                 with xr.open_dataset(path, engine="h5netcdf") as opened:
-                    pieces.setdefault(request.part, []).append(opened.load())
+                    window = opened.sel(time=slice(first, last)).load()
+                    pieces.setdefault(request.part, []).append(window)
     if not pieces:
         raise SystemExit(f"no planned file holds {var} between {first} and {last}")
     wanted = np.arange(
@@ -760,16 +789,36 @@ def invariant(store: Store, requests, var: str):
     return join_parts(parts)
 
 
-def _blocks(start: date, end: date):
-    """Yearly blocks of local days: memory stays bounded by one year of one variable."""
-    for year in range(start.year, end.year + 1):
-        yield max(start, date(year, 1, 1)), min(end, date(year, 12, 31))
+#: Blocks of local days for the daily products (``--daily-block``).
+DAILY_BLOCKS = ("month", "year")
 
 
-def build_registered_daily(
-    store: Store, requests, start: date, end: date, day_definition: str, contrast: bool
-):
-    """TX/TN (and the t2m contrast) per local day, with the land-sea mask."""
+def _blocks(start: date, end: date, period: str = "month"):
+    """Blocks of local days ``start..end``, by calendar month (default) or year.
+
+    Each block is read, aggregated and written before the next (``aq.BlockWriter``), so
+    memory holds the hours of one block of one variable plus its daily values: a month of
+    0.25 degree data over 260 000 cells is 0.76 GB per variable in float32, a year 9.1 GB.
+    """
+    if period not in DAILY_BLOCKS:
+        raise ValueError(f"unknown block {period!r}; one of {', '.join(DAILY_BLOCKS)}")
+    a = start
+    while a <= end:
+        if period == "year":
+            b = date(a.year, 12, 31)
+        else:
+            b = date(a.year, a.month, calendar.monthrange(a.year, a.month)[1])
+        b = min(b, end)
+        yield a, b
+        a = b + timedelta(1)
+
+
+def registered_daily_blocks(
+    store: Store, requests, start: date, end: date, day_definition: str, contrast: bool,
+    period: str = "month",
+):  # fmt: skip
+    """TX/TN (and the t2m contrast) per local day, block by block; the land-sea mask
+    comes with the first block."""
     import xarray as xr
 
     import xhw
@@ -777,8 +826,7 @@ def build_registered_daily(
     stats = [("mx2t", "max", "tx"), ("mn2t", "min", "tn")]
     if contrast:
         stats += [("t2m", "max", "tx_t2m"), ("t2m", "min", "tn_t2m")]
-    blocks = []
-    for a, b in _blocks(start, end):
+    for i, (a, b) in enumerate(_blocks(start, end, period)):
         out = []
         for var, stat, name in stats:
             series = hourly(store, requests, var, *utc_window([var], a, b, day_definition))
@@ -794,33 +842,34 @@ def build_registered_daily(
                 )  # fmt: skip
             )
         days = xr.merge(out, compat="override", join="outer")  # halo days differ per variable
-        blocks.append(days.sel(time=slice(f"{a}", f"{b}")))
+        days = days.sel(time=slice(f"{a}", f"{b}"))
+        if i == 0:
+            lsm = invariant(store, requests, "lsm")["lsm"]
+            keep = ("latitude", "longitude")
+            days["lsm"] = lsm.drop_vars([c for c in lsm.coords if c not in keep])
         print(f"{a}..{b}: daily aggregation done", flush=True)
-    days = xr.concat(blocks, dim="time")
-    lsm = invariant(store, requests, "lsm")["lsm"]
-    days["lsm"] = lsm.drop_vars([c for c in lsm.coords if c not in ("latitude", "longitude")])
-    days.attrs = {"source": SOURCE}
-    return days
+        yield days
 
 
-def build_variable_daily(
-    store: Store, requests, var: str, stat: str, start: date, end: date, day_definition: str
-):
-    """One statistic of one variable per local day, with the conversions of revision 2, V3."""
-    import xarray as xr
+def variable_daily_blocks(
+    store: Store, requests, var: str, stat: str, start: date, end: date, day_definition: str,
+    period: str = "month",
+):  # fmt: skip
+    """One statistic of one variable per local day, block by block, with the conversions
+    of revision 2, V3."""
+    for a, b in _blocks(start, end, period):
+        yield _variable_daily(store, requests, var, stat, a, b, day_definition)
 
+
+def _variable_daily(store: Store, requests, var, stat, a: date, b: date, day_definition):
     import xhw
 
     spec = CATALOGUE[var]
-    blocks = []
-    for a, b in _blocks(start, end):
-        series = hourly(store, requests, var, *utc_window([var], a, b, day_definition))
-        out = xhw.aggregate_daily(
-            series, variable=var, statistic="mean" if stat == "total" else stat,
-            sampling=spec.sampling, input_clock="UTC", day_definition=day_definition,
-        )  # fmt: skip
-        blocks.append(out.sel(time=slice(f"{a}", f"{b}")))
-    days = xr.concat(blocks, dim="time")
+    series = hourly(store, requests, var, *utc_window([var], a, b, day_definition))
+    days = xhw.aggregate_daily(
+        series, variable=var, statistic="mean" if stat == "total" else stat,
+        sampling=spec.sampling, input_clock="UTC", day_definition=day_definition,
+    ).sel(time=slice(f"{a}", f"{b}"))  # fmt: skip
     if spec.kind == "accumulated":
         attrs = dict(days[var].attrs)
         if stat == "total":  # a complete day holds 24 hourly accumulations ending in it
@@ -837,29 +886,96 @@ def build_variable_daily(
     return days
 
 
-def write_daily(
-    store: Store, ds, path: Path, inputs, compress: int | None, recipe: dict | None = None
-) -> str:
-    """Write a daily product atomically unless an identical one is current; return status.
+def product_inputs(inputs, compress: int | None, recipe: dict | None = None) -> dict:
+    """The identity of a product: its pieces, its ``recipe`` and its physical encoding.
 
-    A product is current only if it came from the same pieces and the same ``recipe`` (day
-    definition, variables, statistics, conversions, policies): any change rebuilds it.
+    The recipe (day definition, variables, statistics, conversions, policies) decides the
+    values; the encoding (``--compress``) only the layout, but a product written with
+    another one is rewritten in place (``Ledger.refresh_product``), without downloading again.
     """
-    inputs = {**inputs, "recipe": aq.request_sha256(recipe or {})}
-    status = store.ledger.product_status(path.name, path, inputs)
-    if status == "current":
-        return "current"
+    return {
+        **inputs,
+        "recipe": aq.request_sha256(recipe or {}),
+        "encoding": aq.encoding_label(compress),
+    }
+
+
+def product_status(store: Store, name: str, path: Path, inputs, compress: int | None) -> str:
+    """``current``, ``reencoded``, ``missing`` or ``stale``; a file that is not the recorded
+    one stops. A product that differs only in its encoding is rewritten in place first.
+    """
+    status = store.ledger.refresh_product(name, path, inputs, compress)
     if status in ("changed", "unrecorded"):
         raise SystemExit(
             f"{path.name} exists but is not the recorded product ({status}); move it away "
             "or use another --data-dir."
         )
-    encoding = (
-        {v: {"zlib": True, "complevel": compress} for v in ds.data_vars} if compress else None
-    )
-    aq.write_netcdf_atomic(ds, path, encoding=encoding)
+    return status
+
+
+def write_daily(
+    store: Store, blocks, path: Path, inputs, compress: int | None, recipe: dict | None = None,
+    attrs: dict | None = None,
+) -> str:  # fmt: skip
+    """Write a daily product block by block unless an identical one is current.
+
+    ``blocks`` is an iterable of datasets that follow each other in time, such as the
+    generators ``registered_daily_blocks`` and ``variable_daily_blocks``: it is consumed
+    only if the product must be (re)built, and one block at a time. ``attrs`` are the global
+    attributes of the file. Returns ``current``, ``written`` or ``rebuilt``.
+    """
+    inputs = product_inputs(inputs, compress, recipe)
+    status = product_status(store, path.name, path, inputs, compress)
+    if status in aq.UP_TO_DATE:
+        return status
+    with aq.BlockWriter(path, compress=compress) as writer:
+        for block in blocks:
+            if attrs is not None:
+                block.attrs = dict(attrs)
+            writer.append(block)
+        writer.commit()
     store.ledger.record_product(path.name, path, inputs, recipe=recipe or {})
     return "written" if status == "missing" else "rebuilt"
+
+
+def write_derived(
+    store: Store, blocks, path_of, recipe_of, inputs, compress: int | None, attrs: dict
+) -> dict[Path, str]:
+    """The files of one derived product, written together from the same blocks.
+
+    Each file holds one daily variable (``path_of(var)``, ``recipe_of(var)``) with the
+    sample counts and indicators of its inputs. The first block names the variables; if
+    every file is current, no further block is computed. Returns ``{path: status}``.
+    """
+    from contextlib import ExitStack
+
+    results: dict[Path, str] = {}
+    todo: dict | None = None
+    counts: list = []
+    with ExitStack() as stack:
+        for block in blocks:
+            if todo is None:
+                ends = ("_n_samples", "_fraction")
+                counts = [v for v in block.data_vars if str(v).endswith(ends)]
+                todo = {}
+                for var in [v for v in block.data_vars if v not in counts]:
+                    path, recipe = path_of(var), recipe_of(var)
+                    identity = product_inputs(inputs, compress, recipe)
+                    results[path] = product_status(store, path.name, path, identity, compress)
+                    if results[path] not in aq.UP_TO_DATE:
+                        writer = stack.enter_context(aq.BlockWriter(path, compress=compress))
+                        todo[var] = (path, identity, recipe, writer)
+                if not todo:
+                    break
+            for var, (*_, writer) in todo.items():
+                one = block[[var, *counts]]  # each file keeps the sample counts of its inputs
+                one.attrs = dict(attrs)
+                writer.append(one)
+        for path, identity, recipe, writer in (todo or {}).values():
+            writer.commit()
+            store.ledger.record_product(path.name, path, identity, recipe=recipe)
+            results[path] = "written" if results[path] == "missing" else "rebuilt"
+    return results
 
 
 def _span(requests, var: str, year: int) -> tuple[datetime, datetime] | None:
@@ -878,6 +994,16 @@ def _span(requests, var: str, year: int) -> tuple[datetime, datetime] | None:
     return max(min(stamps), datetime(year, 1, 1)), min(max(stamps), datetime(year, 12, 31, 23))
 
 
+def _hour_blocks(first: datetime, last: datetime):
+    """Hourly ``first..last`` cut at the start of each UTC month."""
+    a = first
+    while a <= last:
+        following = date(a.year + a.month // 12, a.month % 12 + 1, 1)
+        b = min(last, datetime.combine(following, datetime.min.time()) - timedelta(hours=1))
+        yield a, b
+        a = b + timedelta(hours=1)
+
+
 def consolidate_years(
     store: Store, requests, target: Path, variables, inputs, compress, marks=None
 ):
@@ -886,7 +1012,8 @@ def consolidate_years(
     Only for compatibility with ``hourly_files_sha256`` of the registered manifest (revision
     2, D4): the per-variable monthly files are the primary storage. Each year holds the
     hours planned for every variable; the time dimension is ``valid_time``, as in the CDS
-    answers that the registered files kept. A year file is rebuilt when its pieces change.
+    answers that the registered files kept. A year file is rebuilt when its pieces or its
+    encoding change, and is written month by month: memory holds one month of the variables.
     """
     import xarray as xr
 
@@ -899,24 +1026,25 @@ def consolidate_years(
         if any(r is None for r in ranges):
             continue
         first, last = max(r[0] for r in ranges), min(r[1] for r in ranges)
-        ds = xr.merge([hourly(store, requests, v, first, last) for v in timed])
-        ds = ds.rename({"time": "valid_time"})
-        ds.attrs = {"source": SOURCE, **(marks or {})}
         path = target / f"{year}.nc"
         used = {r.id: inputs[r.id] for r in spans if r.start.year <= year <= r.end.year}
-        status = store.ledger.product_status(f"hourly/{path.name}", path, used)
-        if status != "current":
-            if status in ("changed", "unrecorded"):
-                raise SystemExit(f"{path} exists but is not the recorded file ({status})")
-            encoding = (
-                {v: {"zlib": True, "complevel": compress} for v in timed} if compress else None
-            )
-            aq.write_netcdf_atomic(ds, path, encoding=encoding)
+        used["encoding"] = aq.encoding_label(compress)
+        status = product_status(store, f"hourly/{path.name}", path, used, compress)
+        if status not in aq.UP_TO_DATE:
+            with aq.BlockWriter(path, dim="valid_time", compress=compress) as writer:
+                for a, b in _hour_blocks(first, last):
+                    ds = xr.merge([hourly(store, requests, v, a, b) for v in timed])
+                    ds = ds.rename({"time": "valid_time"})
+                    ds.attrs = {"source": SOURCE, **(marks or {})}
+                    writer.append(ds)
+                writer.commit()
             store.ledger.record_product(f"hourly/{path.name}", path, used)
-        print(f"{path.name}: {ds.sizes['valid_time']} hours ({status})", flush=True)
+        hours = int((last - first) / timedelta(hours=1)) + 1
+        print(f"{path.name}: {hours} hours ({status})", flush=True)
         paths.append(path)
     if any(r.variables == ("lsm",) for r in requests):
-        aq.write_netcdf_atomic(invariant(store, requests, "lsm"), target / "lsm.nc")
+        lsm = aq.with_layout(invariant(store, requests, "lsm"), compress)
+        aq.write_netcdf_atomic(lsm, target / "lsm.nc")
         paths.append(target / "lsm.nc")
     return paths
 
@@ -954,8 +1082,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-era5t", action="store_true", help="accept preliminary ERA5T")
     parser.add_argument("--accept-unknown-expver-before", type=date.fromisoformat)
     parser.add_argument("--expver-justification", help="required with the previous option")
-    parser.add_argument("--compress", action="store_true", help="zlib for the files written")
-    parser.add_argument("--compression-level", type=int, default=4, choices=range(1, 10))
+    aq.compression_arguments(parser)
+    parser.add_argument(
+        "--daily-block", choices=DAILY_BLOCKS, default="month",
+        help="local days read, aggregated and written at a time (memory: one block of one "
+        "variable); the products do not depend on it",
+    )  # fmt: skip
     parser.add_argument(
         "--derived",
         nargs="+",
@@ -1017,7 +1149,7 @@ def main(argv=None, client_factory=None) -> int:
         parser.error("--workers must be >= 1")
     if args.accept_unknown_expver_before and not args.expver_justification:
         parser.error("--accept-unknown-expver-before needs --expver-justification")
-    compress = args.compression_level if args.compress else None
+    compress = aq.compression(args)
     key = _key(region, area)
     areas = [part.area for part in area]
     store_dir = args.data_dir / "era5_single" / key
@@ -1074,6 +1206,9 @@ def main(argv=None, client_factory=None) -> int:
             expver=expver, compress=compress,
         )  # fmt: skip
         summary.report()
+        rewritten = reencode_pieces(store, requests, compress)
+        if rewritten:
+            print(f"{len(rewritten)} pieces rewritten with {aq.encoding_label(compress)}")
         valid = [i for i in ids if summary.statuses[i] == "validated"]
         files = {}
         for i in valid:
@@ -1119,22 +1254,28 @@ def main(argv=None, client_factory=None) -> int:
         **policy,
     }
     combined = set(DEFAULT_VARIABLES) <= set(args.variables)
+    block = args.daily_block
+    attrs = {"source": SOURCE, **marks}
     if combined:
-        ds = build_registered_daily(store, requests, start, end, args.day_definition, args.contrast)
-        ds.attrs.update(marks)
+        blocks = registered_daily_blocks(
+            store, requests, start, end, args.day_definition, args.contrast, block
+        )
         path = args.data_dir / f"era5_{key}_daily_{stamp}.nc"
         recipe = {**base, "product": "tx/tn", "contrast": args.contrast}
-        print(f"{path.name}: {write_daily(store, ds, path, inputs, compress, recipe)}")
+        status = write_daily(store, blocks, path, inputs, compress, recipe, attrs)
+        print(f"{path.name}: {status}")
         products[path.name] = path
     for var in args.variables:
         if (combined and var in DEFAULT_VARIABLES) or CATALOGUE[var].kind == "invariant":
             continue
         for stat in CATALOGUE[var].daily:
-            ds = build_variable_daily(store, requests, var, stat, start, end, args.day_definition)
-            ds.attrs.update(marks)
+            blocks = variable_daily_blocks(
+                store, requests, var, stat, start, end, args.day_definition, block
+            )
             path = args.data_dir / f"era5_{key}_daily_{var}_{stat}_{stamp}.nc"
             recipe = {**base, "product": var, "statistic": stat}
-            print(f"{path.name}: {write_daily(store, ds, path, inputs, compress, recipe)}")
+            status = write_daily(store, blocks, path, inputs, compress, recipe, attrs)
+            print(f"{path.name}: {status}")
             products[path.name] = path
 
     def get_hourly(var, sampling, a, b, definition):
@@ -1142,22 +1283,17 @@ def main(argv=None, client_factory=None) -> int:
         return hourly(store, requests, var, *hour_window(sampling, a, b, definition))
 
     for name in args.derived:
-        import xarray as xr
-
-        ds = xr.concat(
-            [
-                _derived.daily(name, get_hourly, a, b, args.day_definition)
-                for a, b in _blocks(start, end)
-            ],
-            dim="time",
+        blocks = (
+            _derived.daily(name, get_hourly, a, b, args.day_definition)
+            for a, b in _blocks(start, end, block)
         )
-        ds.attrs = {"source": SOURCE, "catalogue": CATALOGUE_VERSION, **marks}
-        counts = [v for v in ds.data_vars if str(v).endswith(("_n_samples", "_fraction"))]
-        for var in [v for v in ds.data_vars if v not in counts]:
-            path = args.data_dir / f"era5_{key}_daily_{var}_{stamp}.nc"
-            recipe = {**base, "product": var, "derived": name}
-            one = ds[[var, *counts]]  # each file keeps the sample counts of its inputs
-            print(f"{path.name}: {write_daily(store, one, path, inputs, compress, recipe)}")
+        written = write_derived(
+            store, blocks, lambda var: args.data_dir / f"era5_{key}_daily_{var}_{stamp}.nc",
+            lambda var, name=name: {**base, "product": var, "derived": name}, inputs, compress,
+            {"source": SOURCE, "catalogue": CATALOGUE_VERSION, **marks},
+        )  # fmt: skip
+        for path, status in written.items():
+            print(f"{path.name}: {status}")
             products[path.name] = path
     # the box check of the joined grid (both parts of a box crossing the antimeridian)
     grid = (

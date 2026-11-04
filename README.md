@@ -149,6 +149,13 @@ tests/       content hash, comparison helpers, input contracts
 `_data.py`, `_report.py` and `plotting.py` are copies of the helpers of the xHW `examples/`
 folder, with the real-data loaders added; keep them in step by hand.
 
+## Versions
+
+Code and data have separate tags. Code tags (`v0.2.0`) mark the scripts, notebooks, tests and
+documentation; data tags (`data-v1`) mark the release assets above. The current code is `v0.2.0`
+(rebuilt downloaders) and still uses the `data-v1` data, unchanged. What each version changed is in
+[`CHANGELOG.md`](CHANGELOG.md).
+
 ## Status and limits
 
 - The datasets are modified copies of NOAA, Copernicus Climate Change Service and Copernicus

@@ -443,15 +443,17 @@ def _seam(box: aq.Box, lons: list) -> tuple[list[slice], int]:
 
 
 def join_parts(
-    parts: list[Path], out: Path, *, box: aq.Box, policy: str, variables: list[str]
-) -> dict:
+    parts: list[Path], out: Path, *, box: aq.Box, policy: str, variables: list[str],
+    compress: int | None = aq.DEFAULT_COMPRESSION,
+) -> dict:  # fmt: skip
     """Join the parts along longitude into ``out`` (atomically) and return its checks.
 
     Values are copied as stored (packed integers stay packed, no CF decoding), one slab of
     days at a time (``JOIN_SLAB_BYTES`` per variable and part), so a large box never has to
-    fit in memory. The parts must share days, depths, latitudes, dimension order, dtypes and
-    the decoding attributes; the joined longitudes must pass ``check_coverage`` for the whole
-    box under ``policy``.
+    fit in memory; the variables are written with zlib ``compress`` and byte shuffle (or
+    uncompressed), whatever the parts' compression. The parts must
+    share days, depths, latitudes, dimension order, dtypes and the decoding attributes; the
+    joined longitudes must pass ``check_coverage`` for the whole box under ``policy``.
     """
     import h5netcdf
     import numpy as np
@@ -488,10 +490,15 @@ def join_parts(
             f.dimensions = sizes
             f.attrs.update(first.attrs)
 
+            zlib = {"compression": "gzip", "compression_opts": compress, "shuffle": True}
+            layout = {v: zlib for v in variables} if compress else {}
+
             def create(name, var, data=None):
                 attrs = dict(var.attrs)
                 fill = attrs.pop("_FillValue", None)
-                created = f.create_variable(name, var.dims, var.dtype, data=data, fillvalue=fill)
+                created = f.create_variable(
+                    name, var.dims, var.dtype, data=data, fillvalue=fill, **layout.get(name, {})
+                )
                 created.attrs.update(attrs)
                 return created
 
@@ -729,17 +736,25 @@ def run_piece(
     )
 
 
-def part_inputs(ledger: aq.Ledger, year: Year) -> dict[str, str] | None:
-    """SHA-256 of each validated part of ``year``, or None if a part is not validated."""
+def part_inputs(
+    ledger: aq.Ledger, year: Year, compress: int | None = aq.DEFAULT_COMPRESSION
+) -> dict[str, str] | None:
+    """Identity of the join of ``year``: SHA-256 of each validated part and the encoding,
+    or None if a part is not validated."""
     entries = [ledger.get(p.id) or {} for p in year.pieces]
     if any(e.get("status") != "validated" for e in entries):
         return None
-    return {p.id: e["piece"]["sha256"] for p, e in zip(year.pieces, entries)}
+    inputs = {p.id: e["piece"]["sha256"] for p, e in zip(year.pieces, entries)}
+    return {**inputs, "encoding": aq.encoding_label(compress)}
 
 
-def join_year(ledger: aq.Ledger, plan: Plan, year: Year, variables: list[str]) -> dict:
-    """Join the validated parts of ``year`` (or reuse the current join); raises on failure."""
-    inputs = part_inputs(ledger, year)
+def join_year(
+    ledger: aq.Ledger, plan: Plan, year: Year, variables: list[str],
+    compress: int | None = aq.DEFAULT_COMPRESSION,
+) -> dict:  # fmt: skip
+    """Join the validated parts of ``year`` (or reuse the current join, rewritten in place
+    if only its encoding differs); raises on failure."""
+    inputs = part_inputs(ledger, year, compress)
     if inputs is None:
         states = ", ".join(f"{p.target.name} {ledger.statuses([p.id])[p.id]}" for p in year.pieces)
         raise aq.AcquireError(f"{year.name}: cannot join, parts not validated ({states})")
@@ -749,7 +764,7 @@ def join_year(ledger: aq.Ledger, plan: Plan, year: Year, variables: list[str]) -
         raise aq.ValidationError(f"{year.name}: the parts cover different days {sorted(spans)}")
     partial = checks[0]["partial"]
     final = year.partial_target if partial else year.target
-    if ledger.product_status(year.name, final, inputs) == "current":
+    if ledger.refresh_product(year.name, final, inputs, compress) in aq.UP_TO_DATE:
         return ledger.data["products"][year.name]
     pending = JoinIntents(plan.folder / "joins_pending.json")
     ours = pending.get(year.name)  # a join published by an interrupted run, never recorded
@@ -761,7 +776,9 @@ def join_year(ledger: aq.Ledger, plan: Plan, year: Year, variables: list[str]) -
             raise aq.PermanentError(problem)
     paths = [ledger.resolve(ledger.get(p.id)["piece"]["path"]) for p in year.pieces]
     pending.set(year.name, final)  # before publishing: a cut before record_product is ours
-    joined = join_parts(paths, final, box=plan.box, policy=plan.policy, variables=variables)
+    joined = join_parts(
+        paths, final, box=plan.box, policy=plan.policy, variables=variables, compress=compress
+    )
     if not partial:
         year.partial_target.unlink(missing_ok=True)  # ours: foreign_file checked it
     days = {k: checks[0][k] for k in ("days", "expected_days", "first_day", "last_day")}
@@ -820,9 +837,13 @@ class RunManifest:
     does not hash the files again.
     """
 
-    def __init__(self, plan: Plan, ledger: aq.Ledger, version_of_client: str | None):
+    def __init__(
+        self, plan: Plan, ledger: aq.Ledger, version_of_client: str | None,
+        compress: int | None = aq.DEFAULT_COMPRESSION,
+    ):  # fmt: skip
         self.plan = plan
         self.ledger = ledger
+        self.compress = compress
         self.client_version = version_of_client
         self.path: Path | None = None
         self.joined: set[str] = set()  # joins checked current (or built) in this run
@@ -838,7 +859,7 @@ class RunManifest:
         for year in plan.years:
             if year.joined:
                 product = ledger.data["products"].get(year.name)
-                inputs = part_inputs(ledger, year)
+                inputs = part_inputs(ledger, year, self.compress)
                 if year.name not in self.joined or product is None or product["inputs"] != inputs:
                     continue
                 name = Path(product["path"]).name
@@ -948,6 +969,7 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, aq.Bo
         help="save a year the service covers only in part as <name>_partial.nc",
     )
     aq.add_run_arguments(parser, workers=1)
+    aq.compression_arguments(parser)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--download", action="store_true")
     mode.add_argument("--dry-run", action="store_true")
@@ -993,14 +1015,17 @@ def main(argv: list[str] | None = None) -> int:
     plan.folder.mkdir(parents=True, exist_ok=True)
     ledger = aq.Ledger(plan.folder / "ledger.json")
     grids = GridReference(plan.folder / "grid_reference.json")
-    manifest = RunManifest(plan, ledger, client_version(client))
+    compress = aq.compression(args)
+    manifest = RunManifest(plan, ledger, client_version(client), compress)
 
     def task(year: Year):
         try:
             for piece in year.pieces:  # every part is tried, even if another one failed
                 run_piece(client, ledger, plan, piece, args, grids, check_box=not year.joined)
+                # received uncompressed: kept (and reused) with the encoding asked
+                ledger.reencode_piece(piece.id, compress)
             if year.joined:
-                product = join_year(ledger, plan, year, args.variables)
+                product = join_year(ledger, plan, year, args.variables, compress)
                 manifest.joined.add(year.name)
                 return product
             return ledger.get(year.pieces[0].id)

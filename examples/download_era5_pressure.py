@@ -282,14 +282,31 @@ def write_output(ds, request: Request, root: Path, compress, checks) -> Path:
     note = f"{aq.utc_now()} written from CDS request {request.id} by download_era5_pressure.py"
     history = ds.attrs.get("history", "")
     ds.attrs = {**ds.attrs, "source": SOURCE, "history": f"{history}\n{note}".strip()}
-    var = request.variable
-    encoding = {var: {"zlib": True, "complevel": compress}} if compress else None
-    aq.write_netcdf_atomic(ds, path, encoding=encoding)
+    aq.write_netcdf_atomic(aq.with_layout(ds, compress), path)
+    _sidecar(path, request, checks)
+    return path
+
+
+def _sidecar(path: Path, request: Request, checks: dict) -> None:
     aq.write_sidecar(
         path, request.body, dataset=DATASET, request_id=request.id,
         expver_status=checks["expver_status"], levels=list(request.levels),
     )  # fmt: skip
-    return path
+
+
+def reencode_pieces(store, requests, compress: int | None) -> list[str]:
+    """Rewrite validated pieces stored with another encoding than asked (same values, new
+    SHA-256 in the sidecar and the ledger); see download_era5.py."""
+    done = []
+    for request in requests:
+        checks = (store.ledger.get(request.id) or {}).get("checks")
+
+        def sidecar(path: Path, request=request, checks=checks) -> None:
+            _sidecar(path, request, checks)
+
+        if store.ledger.reencode_piece(request.id, compress, sidecar):
+            done.append(request.id)
+    return done
 
 
 def download(
@@ -363,7 +380,8 @@ def hourly(store, requests, var: str, levels, first: datetime, last: datetime):
         if b >= first and a <= last:
             with xr.open_dataset(request.output(store.root), engine="h5netcdf") as opened:
                 by_group = by_part.setdefault(request.part, {})
-                by_group.setdefault(request.levels, []).append(opened.load())
+                window = opened.sel(time=slice(first, last)).load()  # only the hours needed
+                by_group.setdefault(request.levels, []).append(window)
     if not by_part:
         raise SystemExit(f"no planned file holds {var} between {first} and {last}")
     joined = []
@@ -419,7 +437,8 @@ def surface_pressure(folder: Path, first: datetime, last: datetime, expver=None,
                     "current policy (see --allow-era5t)"
                 )
             part = re.search(r"_(w|e)\.nc$", path.name)
-            pieces.setdefault(part.group(1) if part else "", []).append(opened.load())
+            window = opened.sel(time=slice(first, last)).load()  # only the hours needed
+            pieces.setdefault(part.group(1) if part else "", []).append(window)
             if used is not None:
                 used[path.relative_to(folder).as_posix()] = (record["sha256"], status)
     if not pieces:
@@ -517,21 +536,15 @@ def daily_block(
     return days
 
 
-def build_daily(
+def daily_blocks(
     store, requests, var, levels, sp_folder, start, end, day_definition, derived=(),
-    expver=None, used=None,
+    expver=None, used=None, period="month",
 ):  # fmt: skip
-    import xarray as xr
-
-    blocks = [
-        daily_block(
+    """The daily values of ``var`` block by block (``download_era5._blocks``)."""
+    for a, b in single._blocks(start, end, period):
+        yield daily_block(
             store, requests, var, levels, sp_folder, a, b, day_definition, derived, expver, used
         )
-        for a, b in single._blocks(start, end)
-    ]
-    days = xr.concat(blocks, dim="time")
-    days.attrs = {"source": SOURCE, "surface_pressure": "ERA5 single levels sp (download_era5.py)"}
-    return days
 
 
 # --- Command line ------------------------------------------------------------------------
@@ -562,8 +575,11 @@ def main(argv=None, client_factory=None) -> int:
     parser.add_argument("--allow-era5t", action="store_true")
     parser.add_argument("--accept-unknown-expver-before", type=date.fromisoformat)
     parser.add_argument("--expver-justification")
-    parser.add_argument("--compress", action="store_true")
-    parser.add_argument("--compression-level", type=int, default=4, choices=range(1, 10))
+    aq.compression_arguments(parser)
+    parser.add_argument(
+        "--daily-block", choices=single.DAILY_BLOCKS, default="month",
+        help="local days read, aggregated and written at a time; the products do not depend on it",
+    )  # fmt: skip
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--download", action="store_true")
     group.add_argument("--daily", action="store_true")
@@ -621,7 +637,7 @@ def main(argv=None, client_factory=None) -> int:
     expver = single.ExpverPolicy(
         args.allow_era5t, args.accept_unknown_expver_before, args.expver_justification
     )
-    compress = args.compression_level if args.compress else None
+    compress = aq.compression(args)
     if args.download:
         if client_factory is None:
             try:
@@ -641,6 +657,9 @@ def main(argv=None, client_factory=None) -> int:
             expver=expver, compress=compress,
         )  # fmt: skip
         summary.report()
+        rewritten = reencode_pieces(store, requests, compress)
+        if rewritten:
+            print(f"{len(rewritten)} pieces rewritten with {aq.encoding_label(compress)}")
         valid = [i for i in ids if summary.statuses[i] == "validated"]
         manifest = aq.build_manifest(
             source="era5_pressure_levels", request=record, pieces=ids,
@@ -674,29 +693,46 @@ def main(argv=None, client_factory=None) -> int:
     if (start.month, start.day, end.month, end.day) == (1, 1, 12, 31):
         stamp = f"{start.year}_{end.year}"
     products = {}
+    joined_grid = None
     used: dict[str, tuple[str, str]] = {}
     for var in variables:
-        ds = build_daily(
-            store, requests, var, levels, args.surface_pressure, start, end,
-            args.day_definition, args.derived, expver, used,
-        )  # fmt: skip
-        sp_marks = sorted({status for _, status in used.values()} - {"final"})
-        product_marks = dict(marks)
-        if sp_marks:  # the mask depends on sp: its status marks the product too
-            status = product_marks["era5_expver_status"]
-            joined = [m for m in status.split("+") if m != "final"] + sp_marks
-            product_marks["era5_expver_status"] = "+".join(dict.fromkeys(joined))
-            product_marks["era5_sp_expver"] = " ".join(sp_marks)
-        ds.attrs.update(product_marks)
-        joined_grid = ds
-        product_inputs = {**inputs, **{f"sp:{name}": sha for name, (sha, _) in used.items()}}
         path = args.data_dir / f"era5p_{key}_daily_{var}_{levels_label(levels)}_{stamp}.nc"
         recipe = {
             "day_definition": args.day_definition, "statistics": list(STATISTICS),
             "derived": list(args.derived), "surface_pressure": str(args.surface_pressure),
             "mask": "100 * level_hPa <= sp_Pa", **expver.record(),
         }  # fmt: skip
-        status = single.write_daily(store, ds, path, product_inputs, compress, recipe)
+        blocks = daily_blocks(
+            store, requests, var, levels, args.surface_pressure, start, end,
+            args.day_definition, args.derived, expver, used, args.daily_block,
+        )  # fmt: skip
+        # The surface pressure files used are known only once every block is read: the
+        # product is written block by block to a temporary file, then kept or discarded.
+        with aq.BlockWriter(path, compress=compress) as writer:
+            for block in blocks:
+                if joined_grid is None:
+                    joined_grid = block[["latitude", "longitude"]].coords.to_dataset()
+                block.attrs = {
+                    "source": SOURCE,
+                    "surface_pressure": "ERA5 single levels sp (download_era5.py)",
+                    **marks,
+                }
+                writer.append(block)
+            sp_marks = sorted({status for _, status in used.values()} - {"final"})
+            product_marks = dict(marks)
+            if sp_marks:  # the mask depends on sp: its status marks the product too
+                status = product_marks["era5_expver_status"]
+                joined = [m for m in status.split("+") if m != "final"] + sp_marks
+                product_marks["era5_expver_status"] = "+".join(dict.fromkeys(joined))
+                product_marks["era5_sp_expver"] = " ".join(sp_marks)
+            writer.update_attrs(product_marks)
+            sp_inputs = {f"sp:{name}": sha for name, (sha, _) in used.items()}
+            identity = single.product_inputs({**inputs, **sp_inputs}, compress, recipe)
+            status = single.product_status(store, path.name, path, identity, compress)
+            if status not in aq.UP_TO_DATE:
+                writer.commit()
+                store.ledger.record_product(path.name, path, identity, recipe=recipe)
+                status = "written" if status == "missing" else "rebuilt"
         print(f"{path.name}: {status}")
         products[path.name] = path
     manifest = aq.build_manifest(

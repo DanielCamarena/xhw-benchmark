@@ -338,7 +338,7 @@ def fetch_once(client, task: Mapping) -> dict:
         acquisition="regional HTTP Range subset of the daily global file",
         request_sha256=task["request_sha256"],
     )
-    aq.write_netcdf_atomic(part, task["raw"])
+    aq.write_netcdf_atomic(aq.with_layout(part, task.get("compress")), task["raw"])
     return {
         "kind": "fetched",
         "source": {"url": url, "series": series, **headers},
@@ -483,6 +483,10 @@ def validate_part(
     return {"shape": {"lat": int(lat.size), "lon": int(lon.size)}, "coverage_ok": True}
 
 
+#: Daily parts read and written at a time by ``combine``: memory holds this many days.
+COMBINE_DAYS = 31
+
+
 def combine(
     paths: Sequence[Path],
     output: Path,
@@ -490,67 +494,99 @@ def combine(
     policy: str,
     variables: Sequence[str],
     days: Sequence[date] | None = None,
+    block_days: int = COMBINE_DAYS,
+    compress: int | None = aq.DEFAULT_COMPRESSION,
 ) -> dict:
     """Join daily parts in time, keeping stored values and dtype; returns the coverage report.
 
     Every part must have the same coordinates, variables, dtypes and packing attributes as
     the first (revision 6, R2); the join is ``exact``. With ``days``, each part's time must
     decode to its day, which also covers reused parts. Raises ``aq.ValidationError``.
+
+    The parts are first checked one by one from their coordinates and attributes, then
+    copied ``block_days`` at a time (``aq.BlockWriter``), so memory holds one block, not the
+    period. The file has the values and attributes of one ``xr.concat`` of every part;
+    ``compress`` is zlib with byte shuffle (or None).
     """
     import xarray as xr
 
-    parts = []
-    for path in paths:
-        with _open(path) as opened:
-            parts.append(opened.load())
-    first = parts[0]
-    for path, part in zip(paths, parts, strict=True):
+    first = None
+    attrs: list[dict] = []
+    times = []
+    for i, path in enumerate(paths):
         name = Path(path).name
-        if set(part.data_vars) != set(variables):
-            raise aq.ValidationError(f"{name}: variables {sorted(part.data_vars)}")
-        for axis in ("lat", "lon"):
-            if not np.array_equal(part[axis].values, first[axis].values):
-                raise aq.ValidationError(f"{name}: {axis} differs from {Path(paths[0]).name}")
-        for key in ("units", "calendar"):
-            if part["time"].attrs.get(key) != first["time"].attrs.get(key):
-                raise aq.ValidationError(f"{name}: time {key} differs from {Path(paths[0]).name}")
-        for v in variables:
-            if part[v].dtype != first[v].dtype:
-                raise aq.ValidationError(f"{name}: {v} dtype {part[v].dtype} != {first[v].dtype}")
-            for key in PACKING:
-                if not _same(part[v].attrs.get(key), first[v].attrs.get(key)):
-                    raise aq.ValidationError(f"{name}: {v} attribute {key} differs")
-    for path, part, day in zip(paths, parts, days or [], strict=False):
-        if (found := decoded_day(part["time"])) != day.isoformat():
-            raise aq.ValidationError(f"{Path(path).name}: time decodes to {found}, not {day}")
-    times = np.concatenate([p["time"].values for p in parts])
+        with _open(path) as part:
+            if first is None:
+                first = part[["lat", "lon", "time"]].load()
+                first_vars = {v: (part[v].dtype, dict(part[v].attrs)) for v in variables}
+            if set(part.data_vars) != set(variables):
+                raise aq.ValidationError(f"{name}: variables {sorted(part.data_vars)}")
+            for axis in ("lat", "lon"):
+                if not np.array_equal(part[axis].values, first[axis].values):
+                    raise aq.ValidationError(f"{name}: {axis} differs from {Path(paths[0]).name}")
+            for key in ("units", "calendar"):
+                if part["time"].attrs.get(key) != first["time"].attrs.get(key):
+                    raise aq.ValidationError(
+                        f"{name}: time {key} differs from {Path(paths[0]).name}"
+                    )
+            for v in variables:
+                dtype, reference = first_vars[v]
+                if part[v].dtype != dtype:
+                    raise aq.ValidationError(f"{name}: {v} dtype {part[v].dtype} != {dtype}")
+                for key in PACKING:
+                    if not _same(part[v].attrs.get(key), reference.get(key)):
+                        raise aq.ValidationError(f"{name}: {v} attribute {key} differs")
+            if days is not None and i < len(days):
+                if (found := decoded_day(part["time"].load())) != days[i].isoformat():
+                    raise aq.ValidationError(f"{name}: time decodes to {found}, not {days[i]}")
+            times.append(part["time"].values)
+            attrs.append({"": dict(part.attrs), **{k: dict(part[k].attrs) for k in part.variables}})
+    times = np.concatenate(times)
     if np.any(np.diff(times) <= 0):
         raise aq.ValidationError("daily times are not strictly increasing")
-    series = xr.concat(
-        parts,
-        dim="time",
-        data_vars="minimal",
-        coords="minimal",
-        compat="override",
-        join="exact",
-        combine_attrs="drop_conflicts",
-    )
-    for v in variables:
-        if series[v].dtype != first[v].dtype:
-            raise aq.ValidationError(f"{v} changed dtype to {series[v].dtype} when combined")
     try:
         report = aq.check_coverage(
             box,
-            series["lat"].values,
-            series["lon"].values,
+            first["lat"].values,
+            first["lon"].values,
             policy,
             lat_step=GRID_STEP,
             lon_step=GRID_STEP,
         )
     except aq.CoverageError as exc:
         raise aq.ValidationError(str(exc)) from exc
-    encoding = {v: {"zlib": True, "complevel": 4, "shuffle": True} for v in series.data_vars}
-    aq.write_netcdf_atomic(series, output, encoding=encoding)
+    # what one concatenation of every part would keep (combine_attrs="drop_conflicts")
+    merged = {k: aq.merge_attrs([a[k] for a in attrs if k in a]) for k in attrs[0]}
+    with aq.BlockWriter(output, compress=compress, raw=True) as writer:
+        for start in range(0, len(paths), block_days):
+            parts = []
+            for path in paths[start : start + block_days]:
+                with _open(path) as opened:
+                    parts.append(opened.load())
+            series = xr.concat(
+                parts,
+                dim="time",
+                data_vars="minimal",
+                coords="minimal",
+                compat="override",
+                join="exact",
+                combine_attrs="drop_conflicts",
+            )
+            for v in variables:
+                if series[v].dtype != first_vars[v][0]:
+                    raise aq.ValidationError(
+                        f"{v} changed dtype to {series[v].dtype} when combined"
+                    )
+            if start:  # variables without time come from the first part, as in one concat
+                series = series.drop_vars(
+                    [k for k in series.data_vars if "time" not in series[k].dims]
+                )
+            series.attrs = merged[""]
+            for k in series.variables:  # concatenated variables; the others come from the first
+                if "time" in series[k].dims:
+                    series[k].attrs = merged[k]
+            writer.append(series)
+        writer.commit()
     return report
 
 
@@ -584,6 +620,7 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         "(default on)",
     )
     aq.add_run_arguments(parser)
+    aq.compression_arguments(parser)
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args(argv)
     try:
@@ -671,6 +708,7 @@ def main(argv: Sequence[str] | None = None, client_factory=None) -> int:
         "include_icdr": args.include_icdr,
         "retries": args.retries,
         "request_sha256": aq.request_sha256(request),
+        "compress": aq.compression(args),
     }
     for day, piece in ids.items():
         target = part_path(data_dir, request_hash, day)
@@ -712,9 +750,15 @@ def main(argv: Sequence[str] | None = None, client_factory=None) -> int:
         print("Not combined: every day must validate first. Run again to resume.")
         return summary.exit_code
 
+    compress = aq.compression(args)
+    rewritten = [i for i in piece_ids if ledger.reencode_piece(i, compress)]
+    if rewritten:
+        print(f"{len(rewritten)} days rewritten with {aq.encoding_label(compress)}")
+    ledger.save()
     paths = [ledger.resolve(ledger.get(i)["piece"]["path"]) for i in piece_ids]
     inputs = {i: ledger.get(i)["piece"]["sha256"] for i in piece_ids}
-    status = ledger.product_status(output.name, output, inputs)
+    inputs["encoding"] = aq.encoding_label(compress)
+    status = ledger.refresh_product(output.name, output, inputs, compress)
     # A combination is announced before its file is published, so a run interrupted between
     # publishing and recording it can rebuild that file instead of refusing it.
     pending = ledger.data.setdefault("pending_products", {})
@@ -727,12 +771,12 @@ def main(argv: Sequence[str] | None = None, client_factory=None) -> int:
         )
         return 1
     try:
-        if status == "current":
+        if status in aq.UP_TO_DATE:
             coverage = coverage_of(output, box, policy)
         else:
             pending[output.name] = inputs
             ledger.save()
-            coverage = combine(paths, output, box, policy, variables, days)
+            coverage = combine(paths, output, box, policy, variables, days, compress=compress)
     except aq.ValidationError as exc:
         print(f"Not combined: {exc}", file=sys.stderr)
         return 1

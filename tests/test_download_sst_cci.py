@@ -15,7 +15,7 @@ import json
 import sys
 import time
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -27,6 +27,7 @@ sys.path.insert(0, str(EXAMPLES))
 
 import _acquire as aq  # noqa: E402
 import download_sst_cci as d  # noqa: E402
+from content_hash import content_sha256  # noqa: E402
 
 xr = pytest.importorskip("xarray")
 pytest.importorskip("h5netcdf")
@@ -688,3 +689,105 @@ def test_interrupted_combination_is_rebuilt_after_an_etag_change(archive, tmp_pa
     with open_raw(out) as ds, open_raw(archive.files["changed"]) as src:
         expected = src["analysed_sst"].sel(lat=ds.lat, lon=ds.lon).values[0]
         np.testing.assert_array_equal(ds["analysed_sst"].values[1], expected)
+
+
+# --- bounded memory (2026-11-04) -------------------------------------------------------------
+
+
+def _packed_day(path: Path, day: int, *, comment: str) -> Path:
+    rng = np.random.default_rng(day)
+    values = rng.integers(-500, 500, (1, 3, 3)).astype("int16")
+    values[0, 1, 1] = -32768  # the fill value
+    ds = xr.Dataset(
+        {"analysed_sst": (("time", "lat", "lon"), values)},
+        coords={
+            "time": [day],
+            "lat": [-12.025, -11.975, -11.925],
+            "lon": [-80.025, -79.975, -79.925],
+        },
+        attrs={"title": "SST CCI", "date_created": f"2026-01-{day:02d}", "day": day},
+    )
+    ds["time"].attrs["units"] = "days since 2020-01-01"
+    ds["analysed_sst"].attrs.update(
+        scale_factor=0.01, add_offset=273.15, _FillValue=np.int16(-32768), units="kelvin",
+        comment=comment,
+    )  # fmt: skip
+    ds.to_netcdf(path, engine="h5netcdf")
+    return path
+
+
+@pytest.mark.parametrize("block_days", [1, 2, 3, 31])
+def test_combine_in_blocks_equals_one_concatenation(tmp_path, block_days):
+    # The previous combine loaded every part and wrote one concatenation: same values,
+    # same attributes (conflicting ones dropped), whatever the block.
+    paths = [
+        _packed_day(tmp_path / f"p{i}.nc", i, comment="b" if i == 4 else "a") for i in range(1, 8)
+    ]
+    parts = []
+    for path in paths:
+        with open_raw(path) as opened:
+            parts.append(opened.load())
+    whole = xr.concat(
+        parts, dim="time", data_vars="minimal", coords="minimal", compat="override",
+        join="exact", combine_attrs="drop_conflicts",
+    )  # fmt: skip
+    legacy = tmp_path / "legacy.nc"
+    whole.to_netcdf(
+        legacy, engine="h5netcdf",
+        encoding={v: {"zlib": True, "complevel": 4, "shuffle": True} for v in whole.data_vars},
+    )  # fmt: skip
+    box = aq.Box(-12.0, -11.95, -80.0, -79.95)
+    out = tmp_path / "out.nc"
+    days = [date(2020, 1, 1) + timedelta(i) for i in range(1, 8)]
+    d.combine(paths, out, box, "enclose", ["analysed_sst"], days, block_days=block_days)
+    assert content_sha256(out) == content_sha256(legacy)
+    assert aq.file_encoding(out) == "zlib-4"
+    with open_raw(out) as got, open_raw(legacy) as ref:
+        assert got.attrs == ref.attrs == {"title": "SST CCI"}
+        for name in ref.variables:
+            assert got[name].attrs.keys() == ref[name].attrs.keys(), name
+        assert "comment" not in got["analysed_sst"].attrs
+        assert got["analysed_sst"].dtype == np.int16
+
+
+def test_combine_keeps_variables_without_time_from_the_first_part(tmp_path):
+    # Review 2026-11-04, H1: one concat keeps the first part's static variables.
+    paths = []
+    for i in range(1, 5):
+        path = _packed_day(tmp_path / f"p{i}.nc", i, comment="a")
+        with xr.open_dataset(path, engine="h5netcdf", decode_cf=False) as opened:
+            ds = opened.load()
+        ds["mask"] = (("lat", "lon"), np.full((3, 3), 1 if i < 3 else 2, "int8"))
+        ds.to_netcdf(path, engine="h5netcdf")
+        paths.append(path)
+    parts = []
+    for path in paths:
+        with open_raw(path) as opened:
+            parts.append(opened.load())
+    whole = xr.concat(
+        parts, dim="time", data_vars="minimal", coords="minimal", compat="override",
+        join="exact", combine_attrs="drop_conflicts",
+    )  # fmt: skip
+    legacy = tmp_path / "legacy.nc"
+    whole.to_netcdf(legacy, engine="h5netcdf")
+    box = aq.Box(-12.0, -11.95, -80.0, -79.95)
+    out = tmp_path / "out.nc"
+    d.combine(paths, out, box, "enclose", ["analysed_sst", "mask"], block_days=2)
+    assert content_sha256(out) == content_sha256(legacy)
+    with open_raw(out) as got:
+        assert int(got["mask"].max()) == 1
+
+
+def test_another_encoding_rewrites_days_and_output_without_fetching(archive, tmp_path):
+    data = tmp_path / "data"
+    assert run(archive, data) == 0
+    (output,) = outputs(data)
+    days = sorted(data.rglob("sst_cci_2020*.nc"))
+    assert len(days) == 3
+    assert {aq.file_encoding(p) for p in [output, *days]} == {"zlib-4"}
+    content = {p: content_sha256(p) for p in [output, *days]}
+    archive.reset_calls()
+    assert run(archive, data, "--no-compress") == 0
+    assert archive.calls("open") == []
+    assert {aq.file_encoding(p) for p in [output, *days]} == {"none"}
+    assert {p: content_sha256(p) for p in [output, *days]} == content

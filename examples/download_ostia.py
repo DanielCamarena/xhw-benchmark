@@ -239,6 +239,16 @@ def _times(ds: xr.Dataset) -> np.ndarray:
     return times
 
 
+def month_windows(first: date, last: date):
+    """``first..last`` cut at calendar months."""
+    a = first
+    while a <= last:
+        following = date(a.year + a.month // 12, a.month % 12 + 1, 1)
+        b = min(last, following - timedelta(1))
+        yield a, b
+        a = b + timedelta(1)
+
+
 def check_days(times: np.ndarray, first: date, last: date, *, lead: bool, tail: bool) -> dict:
     """Received days of ``first..last``: daily, continuous, complete.
 
@@ -351,8 +361,11 @@ def main(argv: Sequence[str] | None = None, client=None) -> int:
         help="keep edge years the product covers only in part, as ..._partial.nc",
     )
     parser.add_argument(
-        "--keep-blocks", action="store_true", help="keep the downloaded blocks after splitting"
-    )
+        "--keep-blocks", action="store_true",
+        help="keep the downloaded blocks after splitting (rewritten with --compress like the "
+        "years; otherwise they are deleted as received)",
+    )  # fmt: skip
+    aq.compression_arguments(parser)
     aq.add_run_arguments(parser, workers=1)
     parser.set_defaults(retries=1)  # one global retry (revision 5, E1); network errors unverified
     group = parser.add_mutually_exclusive_group()
@@ -431,6 +444,7 @@ class Run:
         self.args, self.client, self.target, self.box = args, client, target, box
         self.parts, self.requests, self.years = parts, requests, years
         self.run_request = run_request
+        self.compress = aq.compression(args)
         target.mkdir(parents=True, exist_ok=True)
         self.ledger = aq.Ledger(target / "ledger.json")
         for block_id, (a, b, k, req) in requests.items():
@@ -442,26 +456,33 @@ class Run:
         self.grid_lock = threading.Lock()
         self.extents: dict[str, list] = {}
 
-    # Products (one per year) depend on the SHA-256 of the blocks they were built from.
+    # Products (one per year) depend on the SHA-256 of the blocks they were built from and
+    # on their encoding.
 
     def blocks_of(self, name: str) -> list[str]:
         a, b = self.years[name]
         return [i for i, (c, d, _, _) in self.requests.items() if c <= b and a <= d]
 
     def inputs(self, name: str) -> dict:
-        return {
+        blocks = {
             i: (self.ledger.get(i).get("piece") or {}).get("sha256") for i in self.blocks_of(name)
         }
+        return {**blocks, "encoding": aq.encoding_label(self.compress)}
 
     def path_of(self, name: str) -> Path:
         record = self.ledger.data["products"].get(name)
         return self.ledger.resolve(record["path"]) if record else self.target / name
 
     def current(self, name: str) -> bool:
-        """Written from the current blocks and complete; a partial year is always redone."""
-        status = self.ledger.product_status(name, self.path_of(name), self.inputs(name))
+        """Written from the current blocks and complete; a partial year is always redone.
+
+        A year that differs only in its encoding is rewritten in place first, so it never
+        needs its blocks (deleted after splitting) again.
+        """
+        path, inputs = self.path_of(name), self.inputs(name)
+        status = self.ledger.refresh_product(name, path, inputs, self.compress)
         record = self.ledger.data["products"].get(name) or {}
-        return status == "current" and not record.get("checks", {}).get("partial")
+        return status in aq.UP_TO_DATE and not record.get("checks", {}).get("partial")
 
     def edges(self, a: date, b: date) -> dict:
         allow = self.args.allow_partial
@@ -485,6 +506,9 @@ class Run:
             outcomes = aq.run_parallel(tasks, self.args.workers, report)
         summary = aq.RunSummary.from_ledger(self.ledger, list(self.requests), outcomes)
         statuses, errors = dict(summary.statuses), dict(summary.errors)
+        if self.args.keep_blocks:  # blocks kept follow --compress; the others are deleted
+            for i in self.requests:
+                self.ledger.reencode_piece(i, self.compress)
         written = {}
         for name, (a, b) in self.years.items():
             try:
@@ -602,8 +626,12 @@ class Run:
             self.box, lat, lon, self.args.box_policy, lat_step=GRID_STEP, lon_step=GRID_STEP
         )
 
-    def load_period(self, ids: list[str], a: date, b: date) -> xr.Dataset:
-        """Days ``a..b`` of one block period, its longitude parts joined west to east."""
+    def load_period(self, ids: list[str], a: date, b: date, *, empty: bool = False) -> xr.Dataset:
+        """Days ``a..b`` of one block period, its longitude parts joined west to east.
+
+        With ``empty`` no day is read: the result has the coordinates, attributes and
+        packing of the join, at no memory cost.
+        """
         parts = []
         for i in sorted(ids, key=lambda i: self.requests[i][2]):
             path = self.ledger.resolve(self.ledger.get(i)["piece"]["path"])
@@ -611,7 +639,7 @@ class Run:
                 days = decoded["time"].values.astype("datetime64[D]")
             keep = np.flatnonzero((days >= np.datetime64(a, "D")) & (days <= np.datetime64(b, "D")))
             with xr.open_dataset(path, engine="h5netcdf", **RAW) as raw:
-                parts.append(raw.isel(time=keep).load())
+                parts.append(raw.isel(time=keep[:0] if empty else keep).load())
         for other in parts[1:]:
             same = (
                 np.array_equal(parts[0]["time"].values, other["time"].values)
@@ -632,17 +660,9 @@ class Run:
             combine_attrs="drop_conflicts",
         )
 
-    def build_year(self, name: str, a: date, b: date) -> None:
-        """Write one year (or part of one) from its blocks, with the stored values unchanged."""
-        periods: dict[tuple[date, date], list[str]] = {}
-        for i in self.blocks_of(name):
-            c, d, _, _ = self.requests[i]
-            periods.setdefault((c, d), []).append(i)
-        pieces = [self.load_period(ids, a, b) for _, ids in sorted(periods.items())]
-        coverage = self.joined_coverage(
-            np.asarray(pieces[0]["latitude"].values, dtype=float),
-            np.asarray(pieces[0]["longitude"].values, dtype=float),
-        )
+    @staticmethod
+    def join_periods(pieces: list[xr.Dataset]) -> xr.Dataset:
+        """The pieces of one year (one per block period) joined in time, values as stored."""
         encodings = {
             (p["time"].attrs.get("units"), p["time"].attrs.get("calendar")) for p in pieces
         }
@@ -651,26 +671,65 @@ class Run:
                 f"blocks encode time differently: {sorted(map(str, encodings))}"
             )
         check_packing(pieces, "blocks")
-        ds = pieces[0]
-        if len(pieces) > 1:
-            ds = xr.concat(
-                pieces,
-                dim="time",
-                data_vars="minimal",
-                coords="minimal",
-                compat="override",
-                combine_attrs="drop_conflicts",
-            )
-        checks = check_days(xr.decode_cf(ds[["time"]])["time"].values, a, b, **self.edges(a, b))
+        if len(pieces) == 1:
+            return pieces[0]
+        return xr.concat(
+            pieces,
+            dim="time",
+            data_vars="minimal",
+            coords="minimal",
+            compat="override",
+            combine_attrs="drop_conflicts",
+        )
+
+    def build_year(self, name: str, a: date, b: date) -> None:
+        """Write one year (or part of one) from its blocks, with the stored values unchanged.
+
+        The year is written month by month (``aq.BlockWriter``), so memory holds one month
+        of the box. Its attributes, packing and checks come first from a join of the same
+        blocks with no day read, so the file is the one a single join of the year gives.
+        """
+        periods: dict[tuple[date, date], list[str]] = {}
+        for i in self.blocks_of(name):
+            c, d, _, _ = self.requests[i]
+            periods.setdefault((c, d), []).append(i)
+        ordered = [ids for _, ids in sorted(periods.items())]
+        template = self.join_periods([self.load_period(ids, a, b, empty=True) for ids in ordered])
+        coverage = self.joined_coverage(
+            np.asarray(template["latitude"].values, dtype=float),
+            np.asarray(template["longitude"].values, dtype=float),
+        )
+        days = np.concatenate([self.period_days(ids, a, b) for ids in ordered])
+        checks = check_days(days, a, b, **self.edges(a, b))
         partial = checks["days"] < (b - a).days + 1
         path = self.target / file_name(a, b, partial)
         old = self.ledger.data["products"].get(name)
-        aq.write_netcdf_atomic(ds, path)
+        with aq.BlockWriter(path, compress=self.compress, raw=True) as writer:
+            for c, d in month_windows(a, b):
+                pieces = [self.load_period(ids, c, d) for ids in ordered]
+                pieces = [p for p in pieces if p.sizes["time"]]
+                if not pieces:
+                    continue
+                month = self.join_periods(pieces)
+                month.attrs = dict(template.attrs)
+                for k in month.variables:
+                    month[k].attrs = dict(template[k].attrs)
+                writer.append(month)
+            writer.commit()
         if old and self.ledger.resolve(old["path"]).resolve() != path.resolve():
             self.ledger.resolve(old["path"]).unlink(missing_ok=True)
         self.ledger.record_product(
             name, path, self.inputs(name), checks={**checks, "partial": partial}, coverage=coverage
         )
+
+    def period_days(self, ids: list[str], a: date, b: date) -> np.ndarray:
+        """Decoded days ``a..b`` of one block period (from its first part)."""
+        first = min(ids, key=lambda i: self.requests[i][2])
+        path = self.ledger.resolve(self.ledger.get(first)["piece"]["path"])
+        with xr.open_dataset(path, engine="h5netcdf") as decoded:
+            times = decoded["time"].values
+        days = times.astype("datetime64[D]")
+        return times[(days >= np.datetime64(a, "D")) & (days <= np.datetime64(b, "D"))]
 
     def write_manifest(self, written: dict[str, Path]) -> Path:
         ledger, ids = self.ledger, list(self.requests)

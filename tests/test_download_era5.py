@@ -741,3 +741,102 @@ def test_download_manifest_keeps_the_coverage_format(tmp_path):
     stored = json.loads(manifest.read_text())
     assert stored["box"]["ok"] and stored["box"]["policy"] == "enclose"
     assert len(stored["coverage_by_request"]) == 3
+
+
+# --- bounded memory and --compress (external review, 2026-11-04) ---------------------------
+
+
+def products(folder) -> dict[str, str]:
+    return {p.name: content_sha256(p) for p in sorted(folder.glob("era5_*_daily_*.nc"))}
+
+
+def test_daily_blocks_do_not_change_the_products(tmp_path):
+    # Month blocks (the default) and year blocks give the same values, across month ends,
+    # for the registered TX/TN, a variable with a conversion and derived products.
+    argv = [*SMALL, "--start", "2023-01-30", "--end", "2023-03-02",
+            "--variables", "t2m", "mx2t", "mn2t", "u10", "v10", "ssrd",
+            "--derived", "ws10", "tmean_9to9"]  # fmt: skip
+    found = {}
+    for block in ("month", "year"):
+        folder = tmp_path / block
+        assert run(folder, [*argv, "--download"])[0] == 0
+        assert run(folder, [*argv, "--daily", "--daily-block", block])[0] == 0
+        found[block] = products(folder)
+    assert len(found["month"]) == 7 and found["month"] == found["year"]
+
+
+def test_compress_rewrites_pieces_and_products_in_place(tmp_path, capsys):
+    # Compression is the default; the encoding is part of a product's identity. Pieces and
+    # products kept with another one are rewritten in place: nothing downloaded or rebuilt.
+    argv = [*SMALL, "--start", "2023-03-01", "--end", "2023-03-02"]
+    assert run(tmp_path, [*argv, "--download", "--no-compress"])[0] == 0
+    assert run(tmp_path, [*argv, "--daily", "--no-compress"])[0] == 0
+    before = products(tmp_path)
+    (product,) = tmp_path.glob("era5_*_daily_20230301_20230302.nc")
+    assert aq.file_encoding(product) == "none"
+    root = next((tmp_path / "era5_single").iterdir())
+    pieces = sorted(root.glob("*/*/*.nc"))
+    assert {aq.file_encoding(p) for p in pieces} == {"none"}
+    content = {p: content_sha256(p) for p in pieces}
+
+    code, fake = run(tmp_path, [*argv, "--download"])
+    assert code == 0 and fake.calls == []  # nothing downloaded again
+    assert {aq.file_encoding(p) for p in pieces} == {"zlib-4"}
+    assert {p: content_sha256(p) for p in pieces} == content
+    ledger = aq.Ledger(root / "ledger.json")
+    for entry in ledger.pieces.values():
+        files = entry["piece"].get("files") or {entry["piece"]["path"]: entry["piece"]}
+        for stored, record in files.items():
+            assert record["sha256"] == aq.file_sha256(ledger.resolve(stored))
+            side = json.loads(aq.sidecar_path(ledger.resolve(stored)).read_text())
+            assert side["sha256"] == record["sha256"]
+
+    capsys.readouterr()
+    assert run(tmp_path, [*argv, "--daily"])[0] == 0
+    out = capsys.readouterr().out
+    assert "reencoded" in out and "rebuilt" not in out
+    assert products(tmp_path) == before
+    assert aq.file_encoding(product) == "zlib-4"
+    assert run(tmp_path, [*argv, "--daily", "--compression-level", "4"])[0] == 0
+    assert ": current" in capsys.readouterr().out
+    assert run(tmp_path, [*argv, "--daily", "--compression-level", "9"])[0] == 0
+    assert aq.file_encoding(product) == "zlib-9" and products(tmp_path) == before
+    assert run(tmp_path, [*argv, "--daily", "--no-compress"])[0] == 0
+    assert aq.file_encoding(product) == "none" and products(tmp_path) == before
+
+
+def test_consolidated_years_follow_the_encoding(tmp_path):
+    argv = [*SMALL, "--start", "2022-12-31", "--end", "2023-01-01"]
+    assert run(tmp_path, [*argv, "--download"])[0] == 0
+    assert run(tmp_path, [*argv, "--consolidate-years", "--no-compress"])[0] == 0
+    (folder,) = tmp_path.glob("era5_box_*_hourly")
+    assert aq.file_encoding(folder / "2023.nc") == "none"
+    content = content_sha256(folder / "2023.nc")
+    assert run(tmp_path, [*argv, "--consolidate-years"])[0] == 0
+    assert aq.file_encoding(folder / "2023.nc") == "zlib-4"
+    assert content_sha256(folder / "2023.nc") == content
+
+
+def test_daily_memory_is_bounded_by_one_block(tmp_path):
+    # Three months over 41 x 41 nodes: with month blocks the peak of Python and numpy
+    # allocations stays well below the one of a single block holding the three months.
+    import tracemalloc
+
+    argv = ["--box", "-20", "-10", "-85", "-75", "--start", "2023-01-01", "--end", "2023-03-31",
+            "--variables", "t2m"]  # fmt: skip
+    assert run(tmp_path, [*argv, "--download"])[0] == 0
+    peaks = {}
+    for block in ("year", "month"):
+        for path in tmp_path.glob("era5_*_daily_*.nc"):
+            path.unlink()
+        ledger = next((tmp_path / "era5_single").iterdir()) / "ledger.json"
+        stored = json.loads(ledger.read_text())
+        stored["products"] = {}
+        ledger.write_text(json.dumps(stored))
+        tracemalloc.start()
+        assert run(tmp_path, [*argv, "--daily", "--daily-block", block])[0] == 0
+        peaks[block] = tracemalloc.get_traced_memory()[1]
+        tracemalloc.stop()
+    hourly_month = 31 * 24 * 41 * 41 * 4  # bytes of one month of t2m in float32
+    assert peaks["month"] < 0.5 * peaks["year"]
+    assert peaks["month"] < 6 * hourly_month
