@@ -35,6 +35,7 @@ from content_hash import content_sha256, file_sha256
 SOURCES = Path(__file__).parent / "sources"
 COMPRESSION = {"engine": "h5netcdf", "filter": "zlib", "complevel": 9, "shuffle": True}
 RAW = dict(decode_cf=False, mask_and_scale=False, decode_times=False, decode_coords=False)
+OSTIA_YEARS = range(1991, 2026)  # the registered ostia_peru_1991_2025.nc; all are required
 
 
 def open_raw(path: Path) -> xr.Dataset:
@@ -84,8 +85,38 @@ def recompress(source: Path, output: Path) -> dict:
     }
 
 
-def join_in_time(parts: list[Path], output: Path, operation: str, select=None) -> dict:
-    """Concatenate files along time (after an optional selection) and compare each part."""
+def check_yearly_parts(pieces: list[xr.Dataset], years: list[int]) -> tuple[int, int]:
+    """Each part holds every day of its expected year, once and in order.
+
+    ``years`` must be consecutive, so a missing year, a gap, a repeated day or a year that
+    the product covers only in part stops the join. Returns the first and last year.
+    """
+    if not years or list(years) != list(range(years[0], years[0] + len(years))):
+        raise RuntimeError(f"Expected years are not consecutive: {years}")
+    for piece, year in zip(pieces, years, strict=True):
+        days = xr.decode_cf(piece[["time"]])["time"].values
+        wanted = np.arange(np.datetime64(f"{year}-01-01"), np.datetime64(f"{year + 1}-01-01"))
+        if days.dtype.kind != "M" or not np.array_equal(days.astype("datetime64[D]"), wanted):
+            raise RuntimeError(f"The part for {year} does not hold every day of {year} in order")
+        if np.any(np.diff(days) != np.timedelta64(1, "D")):
+            raise RuntimeError(f"The part for {year} is not daily")
+    return years[0], years[-1]
+
+
+def join_in_time(
+    parts: list[Path], output_dir: Path, stem: str, operation: str, years: list[int], select=None
+) -> tuple[Path, dict]:
+    """Concatenate yearly files along time (after an optional selection) and compare each part.
+
+    ``parts[i]`` must be the daily file of ``years[i]``, with the years consecutive and each
+    one complete (``check_yearly_parts``). The output is ``<stem>_<first>_<last>.nc`` in
+    ``output_dir``, named after the years actually joined.
+    """
+    if len(parts) != len(years):
+        raise RuntimeError(f"{len(parts)} files for {len(years)} expected years")
+    missing = [p.name for p in parts if not p.is_file()]
+    if missing:
+        raise FileNotFoundError(f"Missing yearly files: {', '.join(missing)}")
     pieces = []
     for part in parts:
         with open_raw(part) as ds:
@@ -93,6 +124,8 @@ def join_in_time(parts: list[Path], output: Path, operation: str, select=None) -
     units = {piece["time"].attrs.get("units") for piece in pieces}
     if len(units) != 1:
         raise RuntimeError(f"Parts use different time units: {sorted(map(str, units))}")
+    first, last = check_yearly_parts(pieces, years)
+    output = output_dir / f"{stem}_{first}_{last}.nc"
     joined = xr.concat(
         pieces,
         dim="time",
@@ -111,7 +144,7 @@ def join_in_time(parts: list[Path], output: Path, operation: str, select=None) -
             output.unlink()
             raise RuntimeError(f"Joined file differs from its part {start}:{stop}")
         start = stop
-    return {
+    return output, {
         "operation": operation,
         "derived_from": {
             "files": {
@@ -223,11 +256,12 @@ def build(data_dir: Path, output_dir: Path, only=NAMES) -> dict:
         rec = json.loads((SOURCES / "glorys.json").read_text(encoding="utf-8"))
         levels = rec["decimation"]["levels"]
         files = [data_dir / "glorys12v1_peru" / name for name in rec["files"]]
-        out = output_dir / "glorys12v1_peru_decimated_1993_2023.nc"
-        info = join_in_time(
+        out, info = join_in_time(
             files,
-            out,
+            output_dir,
+            "glorys12v1_peru_decimated",
             "decimation: every 8th latitude and longitude, retained levels, joined in time",
+            [int(Path(name).stem.removeprefix("thetao_")) for name in rec["files"]],
             select=lambda ds: ds[["thetao"]].isel(
                 depth=levels,
                 latitude=slice(None, None, 8),
@@ -241,10 +275,11 @@ def build(data_dir: Path, output_dir: Path, only=NAMES) -> dict:
             info,
             "GLORYS12V1 thetao (degC) on the voxels used by the GLORYS tutorial.",
         )
-    ostia = sorted((data_dir / "ostia_peru").glob("analysed_sst_*.nc"))
-    if "ostia" in only and ostia:
-        out = output_dir / "ostia_peru_1991_2025.nc"
-        info = join_in_time(ostia, out, "yearly files joined in time")
+    ostia = [data_dir / "ostia_peru" / f"analysed_sst_{year}.nc" for year in OSTIA_YEARS]
+    if "ostia" in only and any(path.is_file() for path in ostia):
+        out, info = join_in_time(
+            ostia, output_dir, "ostia_peru", "yearly files joined in time", list(OSTIA_YEARS)
+        )
         register(
             "ostia",
             out,

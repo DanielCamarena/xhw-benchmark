@@ -227,7 +227,7 @@ def test_ledger_reuses_only_intact_validated_pieces(tmp_path):
     target.write_bytes(b"two")
     assert not again.reusable(pid)
     assert again.get(pid)["status"] == "planned"
-    assert again.get(pid)["reverted"][-1]["reason"] == "sha256 changed"
+    assert again.get(pid)["reverted"][-1]["reason"] == f"sha256 changed: pieces/{pid}.bin"
     with pytest.raises(ValueError, match="unknown status"):
         again.update(pid, "downloading")
 
@@ -649,3 +649,57 @@ def test_plan_partial_months_and_limits():
         )  # fmt: skip
     with pytest.raises(ValueError, match="not one partial month"):
         aq.cds_date_fields(date(2000, 1, 15), date(2000, 2, 15))
+
+
+# --- command line and registered inputs (F2.0) -------------------------------------------
+
+
+def test_regions_and_box_arguments():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    aq.add_box_arguments(parser)
+    aq.add_period_arguments(parser, "1991-01-01", "2025-12-31")
+    args = parser.parse_args([])
+    assert aq.box_from_args(args) == (ALIGNED, "peru") and args.box_policy == "enclose"
+    box, name = aq.box_from_args(parser.parse_args(["--box", "-12.1", "-3.9", "-82.1", "-76.9"]))
+    assert (box, name) == (UNALIGNED, None)
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--region", "peru", "--box", "0", "1", "0", "1"])
+    # the registered OISST queries, as boxes
+    npacific = aq.REGIONS["npacific"]
+    assert npacific.crosses_antimeridian and npacific.width == pytest.approx(70)
+    (s,) = aq.select_lon_indices(OISST_LON, npacific.west, npacific.east, "inside")
+    assert picked(OISST_LON, s)[[0, -1]].tolist() == [160.125, 229.875]
+    args = parser.parse_args(["--start", "2000-02-01", "--end", "2000-01-01"])
+    with pytest.raises(ValueError, match="after"):
+        aq.period_from_args(args)
+    args = parser.parse_args(["--start", "1981-01-01"])
+    with pytest.raises(ValueError, match="first available"):
+        aq.period_from_args(args, first=date(1981, 9, 1))
+
+
+def test_matches_registered_decides_by_content():
+    record = {"sha256": "a", "content_sha256": "c"}
+    assert aq.matches_registered(record, {"sha256": "b", "content_sha256": "c"}) == {
+        "content_sha256": True,
+        "sha256": False,
+    }
+    assert aq.matches_registered(record, {"sha256": "a"}) == {
+        "content_sha256": None,
+        "sha256": True,
+    }
+
+
+def test_piece_with_several_files_needs_all_intact(tmp_path):
+    ledger = aq.Ledger(tmp_path / "ledger.json")
+    ledger.plan("req", {"piece": "req"}, tmp_path / "t2m.bin")
+    files = [tmp_path / "t2m.bin", tmp_path / "mx2t.bin"]
+    for f in files:
+        f.write_bytes(f.name.encode())
+    entry = ledger.record_piece("req", files)
+    assert set(entry["piece"]["files"]) == {"t2m.bin", "mx2t.bin"}
+    assert ledger.reusable("req")
+    files[1].write_bytes(b"changed")
+    assert not ledger.reusable("req")
+    assert ledger.get("req")["reverted"][-1]["reason"] == "sha256 changed: mx2t.bin"

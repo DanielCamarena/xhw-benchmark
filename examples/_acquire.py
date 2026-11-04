@@ -508,12 +508,30 @@ class Ledger:
             self._changed()
             return entry
 
-    def record_piece(self, piece_id: str, path: str | Path, checks: Mapping | None = None) -> dict:
-        """Mark a piece validated with the hashes of its final file."""
-        path = Path(path)
-        piece = {"path": self._rel(path), "bytes": path.stat().st_size, "sha256": file_sha256(path)}
-        if path.suffix == ".nc":
-            piece["content_sha256"] = content_sha256(path)
+    def record_piece(
+        self,
+        piece_id: str,
+        path: str | Path | Sequence[str | Path],
+        checks: Mapping | None = None,
+    ) -> dict:
+        """Mark a piece validated with the hashes of its final file, or files.
+
+        A request may produce several files (one per variable and month): all are recorded
+        under ``files`` and all must be intact for the piece to be reused.
+        """
+        paths = [Path(path)] if isinstance(path, (str, Path)) else [Path(p) for p in path]
+        if not paths:
+            raise ValueError(f"{piece_id}: no final file to record")
+        records = {}
+        for one in paths:
+            record = {"bytes": one.stat().st_size, "sha256": file_sha256(one)}
+            if one.suffix == ".nc":
+                record["content_sha256"] = content_sha256(one)
+            records[self._rel(one)] = record
+        first = self._rel(paths[0])
+        piece = {"path": first, **records[first]}
+        if len(paths) > 1:
+            piece["files"] = records
         return self.update(
             piece_id, "validated", piece=piece, checks=dict(checks or {}), error=None
         )
@@ -528,10 +546,19 @@ class Ledger:
             entry = self.pieces.get(piece_id)
             if entry is None or entry["status"] != "validated":
                 return False
-            path = self.resolve(entry["piece"]["path"])
-            if path.exists() and file_sha256(path) == entry["piece"]["sha256"]:
+            piece = entry["piece"]
+            files = piece.get("files") or {piece["path"]: piece}
+            reason = None
+            for stored, record in files.items():
+                path = self.resolve(stored)
+                if not path.exists():
+                    reason = f"file missing: {stored}"
+                elif file_sha256(path) != record["sha256"]:
+                    reason = f"sha256 changed: {stored}"
+                if reason:
+                    break
+            if reason is None:
                 return True
-            reason = "file missing" if not path.exists() else "sha256 changed"
             entry.setdefault("reverted", []).append({"utc": utc_now(), "reason": reason})
             self.update(piece_id, "planned")
             return False
@@ -838,12 +865,13 @@ def acquire(
     """Download, validate and publish one planned piece, recording everything in the ledger.
 
     ``fetch(raw)`` writes the server's answer to ``raw`` (transient errors are retried).
-    ``finish(raw)`` opens and validates it, writes the final file atomically and returns
-    ``(final_path, checks)``; it raises ``ValidationError`` for an unreadable file or one
-    that does not match its request. A damaged raw file is recorded and deleted, and the
-    piece is fetched once more (``retry_damaged``); with ``keep_failed`` it goes to
-    quarantine instead. A validated piece whose file is intact is not fetched again.
-    Never raises for a failed piece: the returned entry says what happened.
+    ``finish(raw)`` opens and validates it, writes the final file (or files) atomically and
+    returns ``(final_path_or_paths, checks)``; it raises ``ValidationError`` for an
+    unreadable file or one that does not match its request. A damaged raw file is recorded
+    and deleted, and the piece is fetched once more (``retry_damaged``); with
+    ``keep_failed`` it goes to quarantine instead. A validated piece whose file is intact is
+    not fetched again. Never raises for a failed piece: the returned entry says what
+    happened.
     """
     if ledger.reusable(piece_id):
         return ledger.get(piece_id)
@@ -1033,6 +1061,21 @@ def manifest_path(
     return Path(directory) / f"{prefix}_manifest_{request_id(request)}_{stamp}.json"
 
 
+def matches_registered(record: Mapping, reference: Mapping) -> dict:
+    """Compare a file record with a registered one (``examples/sources/*.json``).
+
+    ``content_sha256`` decides (values and decoding, not container bytes); ``sha256`` is
+    reported too. Each is None when the registered record lacks it.
+    """
+
+    def same(key):
+        if not reference.get(key):
+            return None
+        return record.get(key) == reference[key]
+
+    return {"content_sha256": same("content_sha256"), "sha256": same("sha256")}
+
+
 def write_manifest(directory: str | Path, prefix: str, manifest: Mapping) -> Path:
     """Write the manifest atomically and add it to the folder's ``manifests.json`` index."""
     directory = Path(directory)
@@ -1211,17 +1254,34 @@ def plan_cds_chunks(
 # --- Command line -----------------------------------------------------------------------
 
 
-def add_box_arguments(parser: argparse.ArgumentParser, default: Box | None = None) -> None:
-    """``--box S N W E`` and ``--box-policy`` (default ``enclose``)."""
-    parser.add_argument(
+#: Named boxes, shortcuts of ``--box`` (revision 0, decision 5). Each source maps a region
+#: to its own manifest key (for OISST: oisst, oisst_equatorial, oisst_npacific).
+REGIONS = {
+    "peru": Box(-12.0, -4.0, -82.0, -77.0),
+    "equatorial": Box(-5.0, 5.0, -170.0, -120.0),  # Nino 3.4
+    "npacific": Box(25.0, 55.0, 160.0, -130.0),  # 160E-130W, crosses the antimeridian
+}
+
+
+def add_box_arguments(
+    parser: argparse.ArgumentParser,
+    default_region: str | None = "peru",
+    regions: Sequence[str] = tuple(REGIONS),
+) -> None:
+    """``--region`` or ``--box S N W E``, and ``--box-policy`` (default ``enclose``)."""
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument(
+        "--region",
+        choices=list(regions),
+        default=default_region,
+        help=f"named box (default {default_region})",
+    )
+    where.add_argument(
         "--box",
         nargs=4,
         type=float,
         metavar=("S", "N", "W", "E"),
-        default=None
-        if default is None
-        else [default.south, default.north, default.west, default.east],
-        help="south north west east, in degrees",
+        help="south north west east, in degrees; replaces --region",
     )
     parser.add_argument(
         "--box-policy",
@@ -1230,6 +1290,34 @@ def add_box_arguments(parser: argparse.ArgumentParser, default: Box | None = Non
         help="enclose: nodes on or beyond every edge (default); cover-cells: cells reach "
         "every edge; inside: only nodes inside (the registered inputs)",
     )
+
+
+def box_from_args(args: argparse.Namespace) -> tuple[Box, str | None]:
+    """The requested box and its region name (None for a free ``--box``)."""
+    if args.box is not None:
+        return Box(*args.box), None
+    if args.region is None:
+        raise ValueError("give --region or --box")
+    return REGIONS[args.region], args.region
+
+
+def add_period_arguments(parser: argparse.ArgumentParser, start: str, end: str) -> None:
+    """``--start`` and ``--end`` (inclusive ISO dates)."""
+    parser.add_argument("--start", type=date.fromisoformat, default=date.fromisoformat(start))
+    parser.add_argument("--end", type=date.fromisoformat, default=date.fromisoformat(end))
+
+
+def period_from_args(
+    args: argparse.Namespace, first: date | None = None, last: date | None = None
+) -> tuple[date, date]:
+    """``(start, end)``, checked to be ordered and, if given, within ``first..last``."""
+    if args.start > args.end:
+        raise ValueError(f"--start {args.start} is after --end {args.end}")
+    if first is not None and args.start < first:
+        raise ValueError(f"--start {args.start} is before the first available day {first}")
+    if last is not None and args.end > last:
+        raise ValueError(f"--end {args.end} is after the last available day {last}")
+    return args.start, args.end
 
 
 def add_run_arguments(parser: argparse.ArgumentParser, workers: int = 4) -> None:

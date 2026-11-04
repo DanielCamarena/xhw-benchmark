@@ -5,8 +5,13 @@ permissions:
 jobs:
   examples:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        # The released xHW 0.0.1 (the commit these examples declare) and, apart, the
+        # current default branch, so a later xHW change cannot hide behind a green run.
+        xhw: ['aa44a807ecc512e1f545b57f4e45462bdfd111a0', '']
+    name: ${{ matrix.os }}, xHW ${{ matrix.xhw == '' && 'default branch' || '0.0.1' }}
     runs-on: ${{ matrix.os }}
     env:
       OPENBLAS_NUM_THREADS: '1'
@@ -22,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: DanielCamarena/xhw
+          ref: ${{ matrix.xhw }}
           path: .validation-core
       - run: python -m pip install './.validation-core[dev]' -r examples/requirements-interactive.txt
       - run: python -m pytest

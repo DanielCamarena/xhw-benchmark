@@ -102,14 +102,19 @@ option on.
 
 ## Downloaders (`examples/download_*.py`)
 
-Every downloader prints its request by default, never overwrites a file and writes a manifest of
-what it fetched. Install `examples/requirements-download.txt` in a separate environment.
+Every downloader prints its plan by default. With `--download` it fetches data that contain the
+requested box (`--region` or `--box`, `--box-policy enclose` by default), records each request
+in a ledger so an interrupted run resumes, never reuses a file whose SHA-256 changed, and writes a
+manifest named after the request. The shared code is `examples/_acquire.py`; details are in
+[Data](docs/DATA.md#optional-acquisition-scripts). Install
+`examples/requirements-download.txt` in a separate environment.
 
 | Script | Source | Account |
 |---|---|---|
 | `download_oisst.py` | Source Cooperative Icechunk store of NOAA OISST (pinned snapshot) | none; about 100 s per year |
 | `download_ostia.py` | Copernicus Marine, OSTIA reprocessed | free Copernicus Marine account; 13 min for 1991–2025 |
-| `download_era5.py` | Copernicus Climate Data Store | free CDS account and licence |
+| `download_era5.py` | Copernicus Climate Data Store, ERA5 single levels (and derived variables) | free CDS account and licence |
+| `download_era5_pressure.py` | Copernicus Climate Data Store, ERA5 pressure levels (terrain-masked daily values) | free CDS account and licence |
 | `download_glorys.py` | Copernicus Marine, GLORYS12V1 | free Copernicus Marine account |
 | `download_sst_cci.py` | CEDA archive, ESA SST CCI v3.0.1 (CDR to 2021-12-31, interim series after) | none; hours for 31 years |
 
