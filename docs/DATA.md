@@ -156,7 +156,9 @@ piece's identity, so pieces of two snapshots are never mixed; the default snapsh
 registered one, `1H5D09GQTBHSNHGT67TG`. Coverage and preliminary days are checked before any
 `sst` is read, and a month with preliminary days is never saved. NOAA's attributes are kept;
 `source`, `store`, `store_snapshot` and `history` are added. A box's pieces (one per year) are
-joined one at a time, so memory holds one year of the box. Check the
+joined one at a time, so memory holds one year of the box. `--no-join` (added after `v0.2.0`)
+keeps the validated yearly pieces under `oisst_partial/` and writes no product or manifest; a
+later run without it joins them without transferring again. Check the
 [NOAA product page](https://www.ncei.noaa.gov/products/optimum-interpolation-sst) for the
 product description.
 
@@ -229,7 +231,9 @@ box, one request per day over several processes: about 11 300 requests for 1991â
 took 25 s with three processes in revision 6, so the full period is expected to take hours
 (not measured with the new code). The CDR
 series ends on 2021-12-31; the interim series (ICDR) that continues it is used only with
-`--include-icdr`, and the manifest gives the series of each day. A reused day is checked against
+`--include-icdr`, and the manifest gives the series of each day. `--no-join` (added after
+`v0.2.0`) keeps the validated daily parts and writes no combined file or manifest; a later run
+without it combines them without fetching again. A reused day is checked against
 the server's ETag (`--no-check-etag` skips it). Timestamps are at 12:00, unlike OSTIA's 00:00, so
 align both to the calendar day before comparing. For 1991â€“2025 use OSTIA. The daily parts are
 combined 31 days at a time into one file (values as stored), so memory holds a

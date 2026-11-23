@@ -789,6 +789,25 @@ class Ledger:
 # --- 3. Atomic writes and sidecars ------------------------------------------------------
 
 
+REPLACE_WAITS = (0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2)  # seconds between attempts
+
+
+def replace_file(tmp: str | Path, target: str | Path) -> None:
+    """``os.replace`` that waits out a brief lock on ``target``.
+
+    On Windows the replacement fails with ``PermissionError`` while another program (a file
+    synchroniser, an antivirus, an indexer) has ``target`` open; such locks last a moment, so
+    the replacement is tried again a few times before the error is raised.
+    """
+    for wait in REPLACE_WAITS:
+        try:
+            os.replace(tmp, target)
+            return
+        except PermissionError:
+            time.sleep(wait)
+    os.replace(tmp, target)
+
+
 @contextmanager
 def atomic_target(target: str | Path) -> Iterator[Path]:
     """Yield a temporary path next to ``target``; ``os.replace`` it there only on success."""
@@ -797,7 +816,7 @@ def atomic_target(target: str | Path) -> Iterator[Path]:
     tmp = target.with_name(f"{target.name}.{uuid.uuid4().hex[:8]}.tmp")
     try:
         yield tmp
-        os.replace(tmp, target)
+        replace_file(tmp, target)
     finally:
         tmp.unlink(missing_ok=True)
 

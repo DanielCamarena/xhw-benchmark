@@ -528,6 +528,18 @@ def test_main_download_with_fake_store(tmp_path):
     assert code == 0 and (tmp_path / "oisst_v21_peru_enclose_20000101_20000131.nc").exists()
 
 
+def test_no_join_keeps_the_pieces_and_a_later_run_joins_them_without_reading(tmp_path, reads):
+    argv = ["--data-dir", str(tmp_path), "--years", "2000-2001", "--snapshot", "S2", "--download"]
+    assert d.main([*argv, "--no-join"], opener=Opener()) == 0
+    pieces = sorted((tmp_path / d.PARTIALS / "S2" / "peru").glob("*.nc"))
+    assert len(pieces) == 2
+    assert not list(tmp_path.glob("oisst_v21_*.nc")) and not list(tmp_path.glob("*manifest*"))
+    assert not ledger(tmp_path).get("products")
+    months = reads["n"]
+    assert d.main(argv, opener=Opener()) == 0
+    assert reads["n"] == months and (tmp_path / "oisst_v21_peru_enclose_2000_2001.nc").exists()
+
+
 @pytest.mark.parametrize(
     "argv",
     [

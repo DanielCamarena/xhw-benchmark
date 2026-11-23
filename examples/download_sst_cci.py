@@ -21,7 +21,9 @@ about 11 300 days; use ``--workers`` (processes). Daily parts live under
 each day's URL, ETag, Last-Modified, series and SHA-256; a validated part is reused, after a
 HEAD request confirms its ETag (``--no-check-etag`` skips it). Only transient errors are
 retried; every failed day is reported and nothing is combined until all days validate. The
-combined file keeps the stored (packed) values and dtype.
+combined file keeps the stored (packed) values and dtype. ``--no-join`` keeps the validated
+daily parts and writes no combined file or manifest; a later run without it combines them
+without fetching again.
 
 The record (CDR) ends on 2021-12-31; the same archive continues from 2022-01-01 with an
 interim extension (ICDR, a different file series). ``--end`` cannot pass the CDR end without
@@ -622,6 +624,12 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     aq.add_run_arguments(parser)
     aq.compression_arguments(parser)
     parser.add_argument("--download", action="store_true")
+    parser.add_argument(
+        "--no-join",
+        action="store_true",
+        help="with --download: keep the daily parts and write no combined file or manifest "
+        "(run again without it to combine them; nothing is fetched twice)",
+    )
     args = parser.parse_args(argv)
     try:
         args.box_obj, args.region_name = aq.box_from_args(args)
@@ -755,6 +763,10 @@ def main(argv: Sequence[str] | None = None, client_factory=None) -> int:
     if rewritten:
         print(f"{len(rewritten)} days rewritten with {aq.encoding_label(compress)}")
     ledger.save()
+    if args.no_join:
+        parts = data_dir / "sst_cci_partial" / request_hash
+        print(f"{len(piece_ids)} daily parts in {parts}; not combined")
+        return 0
     paths = [ledger.resolve(ledger.get(i)["piece"]["path"]) for i in piece_ids]
     inputs = {i: ledger.get(i)["piece"]["sha256"] for i in piece_ids}
     inputs["encoding"] = aq.encoding_label(compress)

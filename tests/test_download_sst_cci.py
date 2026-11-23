@@ -368,6 +368,17 @@ def test_reuse_needs_same_box_and_variables(archive, tmp_path):
             assert ds.lat.max() - ds.lat.min() < box["north"] - box["south"] + 0.11
 
 
+def test_no_join_keeps_the_daily_parts_and_a_later_run_combines_them(archive, tmp_path):
+    data = tmp_path / "data"
+    assert run(archive, data, "--no-join") == 0
+    assert len(list((data / "sst_cci_partial").rglob("*.nc"))) == 3
+    assert outputs(data) == [] and manifests(data) == []
+    assert not ledger_of(data).get("products")
+    archive.reset_calls()
+    assert run(archive, data) == 0
+    assert archive.calls("open") == [] and len(outputs(data)) == 1 and len(manifests(data)) == 1
+
+
 def test_resume_reuses_parts_and_checks_etag(archive, tmp_path):
     data = tmp_path / "data"
     assert run(archive, data) == 0

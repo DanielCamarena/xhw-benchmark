@@ -29,6 +29,8 @@ Cycle (revision 3 of the development repository):
    ``source``, ``store``, ``store_snapshot`` and ``history``, and write a manifest with the
    schema of ``examples/sources/oisst*.json`` plus ``content_sha256`` and versions. A product
    written without its manifest gets it on the next run if its SHA-256 matches the ledger.
+   ``--no-join`` stops after step 4: the yearly pieces stay under ``oisst_partial/`` and no
+   product or manifest is written. A later run without it joins them without reading again.
 
 ``--box-policy inside`` with the registered snapshot, region and period reproduces the
 selection of the registered inputs. New files are not automatically equivalent to them:
@@ -730,8 +732,11 @@ def download(
     retry: Retry | None = None,
     opener: Callable[[str], xr.Dataset] | None = None,
     compress: int | None = DEFAULT_COMPRESSION,
+    join: bool = True,
 ) -> RunResult:
     """Download, validate and join every piece; never raises for a failed piece or product.
+
+    ``join=False`` keeps the validated yearly pieces and writes no product or manifest.
 
     ``concurrency`` sets zarr's ``async.concurrency`` (None leaves it). ``opener`` replaces
     ``open_daily`` (tests). ``compress`` (zlib level with byte shuffle, or None) applies to
@@ -760,6 +765,9 @@ def download(
     for target in targets:
         own = [p for p in pieces if p.target == target]
         if any(ledger.get(p.id)["status"] != "validated" for p in own):
+            continue
+        if not join:
+            print(f"{target.label}: {len(own)} yearly pieces in {own[0].path.parent}; not joined")
             continue
         try:
             products[target.label] = finish_product(
@@ -925,6 +933,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--download", action="store_true", help="transfer data (several GB)")
     parser.add_argument(
+        "--no-join",
+        action="store_true",
+        help="with --download: keep the yearly pieces and write no joined product or manifest "
+        "(run again without it to join them; nothing is transferred twice)",
+    )
+    parser.add_argument(
         "--concurrency", type=int, default=8, help="zarr async.concurrency (default 8)"
     )
     parser.add_argument(
@@ -996,6 +1010,7 @@ def main(argv: Sequence[str] | None = None, opener=None) -> int:
         retry=Retry(retries=args.retries),
         opener=opener,
         compress=compression(args),
+        join=not args.no_join,
     )
     for label, product in result.products.items():
         verdict = product.get("matches_registered")

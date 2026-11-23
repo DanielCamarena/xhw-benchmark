@@ -199,6 +199,31 @@ def test_request_identity():
     assert len({aq.request_id(r) for r in (base, other_area, flipped)}) == 3
 
 
+def test_atomic_write_waits_out_a_brief_lock_on_the_target(tmp_path, monkeypatch):
+    real, calls = aq.os.replace, []
+
+    def locked_twice(src, dst):
+        calls.append(dst)
+        if len(calls) <= 2:
+            raise PermissionError(5, "Access is denied")
+        real(src, dst)
+
+    monkeypatch.setattr(aq.os, "replace", locked_twice)
+    monkeypatch.setattr(aq.time, "sleep", lambda seconds: None)
+    target = aq.write_json_atomic(tmp_path / "ledger.json", {"a": 1})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"a": 1} and len(calls) == 3
+    assert list(tmp_path.iterdir()) == [target]
+
+    def always_locked(src, dst):
+        raise PermissionError(5, "Access is denied")
+
+    monkeypatch.setattr(aq.os, "replace", always_locked)
+    with pytest.raises(PermissionError):
+        aq.write_json_atomic(target, {"a": 2})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"a": 1}
+    assert list(tmp_path.iterdir()) == [target]
+
+
 def test_ledger_reuses_only_intact_validated_pieces(tmp_path):
     ledger = aq.Ledger(tmp_path / "ledger.json")
     request = {"variable": ["t2m"], "year": ["2000"]}

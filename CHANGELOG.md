@@ -6,6 +6,16 @@ the processed products, with their checksums. A new code version does not change
 its notes say so, and `examples/fetch_data.py` keeps reading the data tag named in the
 [README](README.md#quick-start).
 
+## Unreleased
+
+Code only; the data stay `data-v1`. Tested with xHW 0.0.1.
+
+- `download_oisst.py` and `download_sst_cci.py`: `--no-join` keeps the validated pieces (yearly
+  for OISST, daily for SST CCI) and writes no joined file or manifest, so a long download does not
+  need twice its space. A later run without it joins them without transferring again.
+- `_acquire.py`: an atomic write retries the final replacement a few times when another program
+  (a file synchroniser, an antivirus) briefly locks the target on Windows, instead of failing.
+
 ## v0.2.0 (2026-11-04): rebuilt downloaders
 
 Code only. **The data stay `data-v1`**: the same six input datasets and the same processed
